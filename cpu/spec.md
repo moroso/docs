@@ -25,7 +25,6 @@ So, the system that I propose is something like a VLIW-MIPS.  Major architectura
 * Upshot: register file is eight-read, four-write
   * 32 registers, like MIPS
   * Maybe segregate SIMD registers?
-
 * To more easily load literals, you can "steal" the adjacent execution unit's slot in the instruction packet
 * P1 feature: variable length instruction packets, to increase encoding efficiency
 * Soft-loaded TLB; whole memory range is TLB-mapped (we get rid of MIPS's silly KUSEG/KSEG0/KSEG1/KSEG2 business)
@@ -40,8 +39,10 @@ The upshot of this for Team Compiler is:
 
 Peripherals --
 * DMA for talking to the peripherals
+
 Bus interface --
 * which RAMs are we using?
+
 Board --
 *  FPGA boards with DRAM get expensive -- Atlys has 128MB of 16-bit wide DDR2-800 (ugh!  that's 1.6 GByte/sec, which is pretty pitiful), and is $400; Nexys 4 hasn't got any DRAM at all!
 * A good option: http://www.terasic.com.tw/cgi-bin/page/archive.pl?Language=English&No=830
