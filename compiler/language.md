@@ -140,6 +140,21 @@ linked_list_add<int>(l, i); // Type is specified explcitly.
 linked_list_add(l, i); // Also valid: type is inferred.
 ```
 
+There are function types, written with a `->`:
+```
+fn apply_to_u8(f: u8 -> u8, x: u8) -> u8 {
+  f(x)
+}
+```
+There are no anonymous functions or closures.
+
+Array types are as in C:
+```
+let x: u8[5] = {1, 2, 3, 4, 5};
+```
+is an array of five `u8`s. The size is considered part of the array type;
+variable-length arrays must be done with pointers. Multi-dimensional
+arrays are also as in C.
 
 ## Pointers ##
 Pointers behave almost exactly like pointers in C. They are nullable, and
@@ -159,3 +174,5 @@ Control structures are as in C. C-style `for`, `while`, and `do {...} while`
 loops are available. Labels and `goto` statements are not; neither are
 `switch` statements (though they may be added later).
 
+## Imports and namespaces ##
+TODO.
