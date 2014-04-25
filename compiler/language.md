@@ -26,11 +26,19 @@ fn frobnicate(x: int, y: int) -> int {
 Like Rust, `return` statements are not required, but can be present.
 The last expression in a function is its return value.
 
-All variables are mutable by default. They may be declared constant:
+All variables are mutable by default. They may be declared constant using
+the `const` qualifier:
 ```
   let const z = 5;
   z = 6; // Error!
 ```
+Other qualifiers are expressed in the same way, between the
+`let` and the variable name; order doesn't matter. (So they're very
+much like qualifiers in C.)
+
+Qualifiers are: `const`, to declare the variable as constant; `static`, to
+indicate a variable should not be allocate on the stack and should preserve
+its value between calls of the function; and `volatile`, as in C.
 
 ## Types ##
 The language is strongly typed. Types can be specified explcitly when
@@ -136,7 +144,7 @@ or let it be inferred:
 let l: *linkedlist<int>;
 let i: *int;
 ...
-linked_list_add<int>(l, i); // Type is specified explcitly.
+linked_list_add::<int>(l, i); // Type is specified explcitly.
 linked_list_add(l, i); // Also valid: type is inferred.
 ```
 
