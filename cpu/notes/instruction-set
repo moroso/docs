@@ -1,0 +1,89 @@
+Here's initial thoughts for the mcpu instruction set:
+
+There are four classes of instruction:
+  * C-type (control) -- branch, call, return, coprocessor
+  * L-type (load/store)
+  * I-type (integer)
+  * S-type (SIMD) -- needs definition
+
+All instructions have a predicate flag -- p0-3, true sense / complement sense.  (p3 is hard-wired as true.)
+
+The instruction set for mcpu is templated from MIPS R4000.
+
+ADD rd, rs, rt
+  ADDI rd, rs, long_imm
+AND rd, rs, rt
+  ANDI rd, rs, long_imm
+# do we want a short_imm form of this?
+
+B rs, short_imm
+  BI long_imm
+  BL rs, short_imm
+  BLI long_imm
+
+BREAK
+
+CACHE op, offset(base)
+?
+
+DIV rs, rt
+  hi = rs / rt
+  lo = rs % rt
+
+MULT rs, rt
+  {hi,lo} = rs * rt
+
+ERET
+  kill LL
+  PC <- EPC
+
+LB/LH/LW/LL rd, ofs(base)
+  LBI/LHI/LWI/LLI rd, long_imm
+
+SXB/SXH rd, rs
+
+MFC rd, cpr
+MFHI rd
+MFLO rd
+MTHI rs
+MTLO rs
+MTC cpr, rs
+CPOP oper
+  (encompasses TLBP, TLBR, TLBWI, TLBWR)
+
+NOR rd, rs, rt
+  NORI rd, rs, long_imm
+
+OR rd, rs, rt
+  ORI rd, rs, long_imm
+
+SB/SH/SW/SC ofs(base), rs
+  SBI/SHI/SWI/SCI long_imm, rs
+
+SLL rd, rs, rt
+  SLLI rd, rs, short_imm
+
+SRA rd, rs, rt
+  SRAI rd, rs, short_imm
+
+SRL rd, rs, rt
+  SRLI rd, rs, short_imm
+
+CMPLT pn, rs, rt
+  CMPLTI pn, rs, rt
+CMPLE pn, rs, rt
+  CMPLEI pn, rs, rt
+CMPEQ pn, rs
+  CMPEQI pn, rs, rt
+CMPZ  pn, rs
+
+SUB rd, rs, rt
+  SUBI rd, rs, long_imm
+
+FENCE
+
+SYSCALL
+
+XOR rd, rs, rt
+  XORI rd, rs, long_imm
+
