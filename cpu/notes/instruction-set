@@ -10,21 +10,67 @@ All instructions have a predicate flag -- p0-3, true sense / complement sense.  
 
 The instruction set for mcpu is templated from MIPS R4000.
 
-ADD rd, rs, rt
-  ADDI rd, rs, long_imm
-AND rd, rs, rt
-  ANDI rd, rs, long_imm
-# do we want a short_imm form of this?
+ALU
+===
 
-B rs, short_imm
-  BI long_imm
-  BL rs, short_imm
-  BLI long_imm
+ALU ops are:
+ 0: ADD    rd = rs + rt
+ 1: AND    rd = rs & rt
+ 2: NOR    rd = ~(rs | rt)
+ 3: OR     rd = rs | rt
+ 4: SUB    rd = rs - rt
+ 5: RSB    rd = rt - rs     (could be removed if we needed another ALU op)
+ 6: XOR    rd = rs ^ rt
+ 7: SXB    rd = sign_extend_8_to_32(rs)
+ 8: SXH    rd = sign_extend_16_to_32(rs)
+ 9: SLL    rd = rs << rt
+ A: SRA    rd = ((signed)rs) >> rt
+ B: SRL    rd = ((unsigned)rs) >> rt
+ C: CMPLT  pn = rs < rt
+ D: CMPLE  pn = rs <= rt
+ E: CMPEQ  pn = rs == rt
+ F: resv
+
+ALU ops come in the forms:
+  ALU rd, rs, rt
+  ALU rd, rs, long_imm
+  ALU rd, rs, short_imm
+
+Control
+=======
 
 BREAK
+SYSCALL
 
-CACHE op, offset(base)
-?
+B rs, short_imm
+  B long_imm
+BL rs, short_imm
+  BL long_imm
+
+ERET
+  kill LL
+  PC <- EPC
+
+MFC rd, cpr
+MTC cpr, rs
+CPOP oper
+  (encompasses TLBP, TLBR, TLBWI, TLBWR)
+
+Load-store
+==========
+
+CACHE op, ofs(base)
+
+LB/LH/LW/LL rd, ofs(base)
+  LBI/LHI/LWI/LLI rd, long_imm
+
+SB/SH/SW/SC ofs(base), rs
+  SBI/SHI/SWI/SCI long_imm, rs
+
+FENCE
+
+Multiplier
+==========
 
 DIV rs, rt
   hi = rs / rt
@@ -33,57 +79,7 @@ DIV rs, rt
 MULT rs, rt
   {hi,lo} = rs * rt
 
-ERET
-  kill LL
-  PC <- EPC
-
-LB/LH/LW/LL rd, ofs(base)
-  LBI/LHI/LWI/LLI rd, long_imm
-
-SXB/SXH rd, rs
-
-MFC rd, cpr
 MFHI rd
 MFLO rd
 MTHI rs
 MTLO rs
-MTC cpr, rs
-CPOP oper
-  (encompasses TLBP, TLBR, TLBWI, TLBWR)
-
-NOR rd, rs, rt
-  NORI rd, rs, long_imm
-
-OR rd, rs, rt
-  ORI rd, rs, long_imm
-
-SB/SH/SW/SC ofs(base), rs
-  SBI/SHI/SWI/SCI long_imm, rs
-
-SLL rd, rs, rt
-  SLLI rd, rs, short_imm
-
-SRA rd, rs, rt
-  SRAI rd, rs, short_imm
-
-SRL rd, rs, rt
-  SRLI rd, rs, short_imm
-
-CMPLT pn, rs, rt
-  CMPLTI pn, rs, rt
-CMPLE pn, rs, rt
-  CMPLEI pn, rs, rt
-CMPEQ pn, rs
-  CMPEQI pn, rs, rt
-CMPZ  pn, rs
-
-SUB rd, rs, rt
-  SUBI rd, rs, long_imm
-
-FENCE
-
-SYSCALL
-
-XOR rd, rs, rt
-  XORI rd, rs, long_imm
-
