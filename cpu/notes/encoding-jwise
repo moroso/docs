@@ -1,0 +1,66 @@
+Encodings:
+
+PRED[2:0] = {pred_num[1:0], pred_true_comp_n}
+ALUOPCO[3:0] =
+  ADD       : 4'b0000 |
+  AND       : 4'b0001 |
+  NOR       : 4'b0010 |
+  OR        : 4'b0011 |
+  SUB       : 4'b0100 |
+  RSB       : 4'b0101 |
+  XOR       : 4'b0110 |
+  MOV       : 4'b0111 |
+  SHIFT_EXT : 4'b1000 |
+  reserved  : 4'b1001 |
+  SXB       : 4'b1010 |
+  SXH       : 4'b1011 |
+  CMPLT     : 4'b1100 |
+  CMPLE     : 4'b1101 |
+  CMPEQ     : 4'b1110 |
+  reserved  : 4'b1111
+
+SHIFT[1:0] =    /* "SHF" */
+  SLL : 2'b00 |
+  SRA : 2'b01 |
+  SRL : 2'b10 |
+  ROR : 2'b11
+
+LSUOPCO[2:0] =
+  LB : 3'b000 |
+  LH : 3'b001 |
+  LW : 3'b010 |
+  LL : 3'b011 |
+  SB : 3'b000 |
+  SH : 3'b001 |
+  SW : 3'b010 |
+  SC : 3'b011
+
+L[0] = 
+  NOLINK : 1'b0 |
+  LINK   : 1'b1
+
+OTHER_OPCODE[9:0] = {OP2[1:0], OPC_3[2:0], OPC_5[4:0]} =
+  RESV0   : 10'b00_000_00000
+  BREAK   : 10'b00_001_xxxxx
+  SYSCALL : 10'b00_010_xxxxx
+  ERET    : 10'b01_000_xxxxx
+  CPOP    : 10'b01_001_xxxxx
+  MFC     : 10'b01_010_xxxxx
+  MTC     : 10'b01_011_xxxxx
+  FENCE   : 10'b01_100_xxxxx
+  MULT    : 10'b10_000_xxxxx
+  DIV     : 10'b10_001_xxxxx
+  MFHI    : 10'b10_010_xxxxx
+  MTHI    : 10'b10_011_xxxxx
+  SIMD?   : 10'b11_xxx_xxxxx
+
+            3 3 2 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1
+            1 0 9 8 7 6 5 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+alu short   PRED  0 ALUOPCO CONSTANT___________ ROTATEAMT RD_______ RS_______ 
+shift short PRED  0 4'b1000 0 0 0 0 0 0 0 0 SHF SHIFTAMT_ RD_______ RS_______ 
+alu long    PRED  1 ALUOPCO 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 RD_______ RS_______ LONG
+alu reg     PRED  1 ALUOPCO 1 0 0 0 0 RT_______ ROTATEAMT RD_______ RS_______
+loadstore   PRED  1 LSUOP 0 1 1 OFFSET___________________ RD_______ RS_______
+branchreg   PRED  1 0 L 0 1 1 1 OFFSET_____________________________ RS_______
+branchlong  PRED  1 0 L 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 LONG
+other       PRED  1 1 OP2 1 1 1 OPC_3 RT_______ OPC_5____ RD_______ RS_______
