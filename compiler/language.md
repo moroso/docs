@@ -52,8 +52,7 @@ or may be inferred:
   let z = x; // type of z is inferred as i8.
 ```
 
-There is no implicit casting. Explicit casts may be done with the `as`
-operator:
+Explicit casts may be done with the `as` operator:
 ```
   let x: u8 = 5;
   let y: i8 = x as uint; // Ok: explicit cast.
@@ -63,7 +62,11 @@ operator:
 The language has rust's sized unsigned integer types `u8`, `u16`, `u32` and
 signed types `i8`, `i16`, `i32`. It does not have an `int` or `uint` type.
 There are no floating point types. At some point support for fixed-point
-types may be added, but they will not initially be present.
+types may be added, but they will not initially be present. An integer
+specified without a size is an i32.
+
+Implicit casting is done between integer types, but only from a smaller type
+to a larger one of the same signedness.
 
 There is a `bool` type, which may contain only the values `true` and `false`.
 
@@ -121,6 +124,12 @@ have a term like
 ```
   Point(0, y) => { ... },
   Point(1, y) => { ... },
+```
+
+There are tuple types, which can be decomposed with `let`:
+```
+  let p: (int, int) = (1, 2);
+  let (p1, p2): (int, int) = p;
 ```
 
 There is limited support for templates, which are basically typechecked
