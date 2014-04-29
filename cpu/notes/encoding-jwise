@@ -39,28 +39,28 @@ L[0] =
   NOLINK : 1'b0 |
   LINK   : 1'b1
 
-OTHER_OPCODE[9:0] = {OP2[1:0], OPC_3[2:0], OPC_5[4:0]} =
-  RESV0   : 10'b00_000_00000
-  BREAK   : 10'b00_001_xxxxx
-  SYSCALL : 10'b00_010_xxxxx
-  ERET    : 10'b01_000_xxxxx
-  CPOP    : 10'b01_001_xxxxx
-  MFC     : 10'b01_010_xxxxx
-  MTC     : 10'b01_011_xxxxx
-  FENCE   : 10'b01_100_xxxxx
-  MULT    : 10'b10_000_xxxxx
-  DIV     : 10'b10_001_xxxxx
-  MFHI    : 10'b10_010_xxxxx
-  MTHI    : 10'b10_011_xxxxx
-  SIMD?   : 10'b11_xxx_xxxxx
+OTHER_OPCODE[8:0] = {OP1[1:0], OP2[1:0], OPC_3[4:0]} =
+  RESV0   : 9'b00_00_00000
+  BREAK   : 9'b00_01_xxxxx
+  SYSCALL : 9'b00_10_xxxxx
+  FENCE   : 9'b00_11_xxxxx
+  ERET    : 9'b01_00_xxxxx
+  CPOP    : 9'b01_01_xxxxx
+  MFC     : 9'b01_10_xxxxx
+  MTC     : 9'b01_11_xxxxx
+  MULT    : 9'b10_00_xxxxx
+  DIV     : 9'b10_01_xxxxx
+  MFHI    : 9'b10_10_xxxxx
+  MTHI    : 9'b10_11_xxxxx
+  SIMD?   : 9'b11_xx_xxxxx
 
-            3 3 2 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1
-            1 0 9 8 7 6 5 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-alu short   PRED  0 ALUOPCO CONSTANT___________ ROTATEAMT RD_______ RS_______ 
-shift short PRED  0 4'b1000 0 0 0 0 0 0 0 0 SHF SHIFTAMT_ RD_______ RS_______ 
-alu long    PRED  1 ALUOPCO 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 RD_______ RS_______ LONG
-alu reg     PRED  1 ALUOPCO 1 0 0 0 0 RT_______ ROTATEAMT RD_______ RS_______
-loadstore   PRED  1 LSUOP 0 1 1 OFFSET___________________ RD_______ RS_______
-branchreg   PRED  1 0 L 0 1 1 1 OFFSET_____________________________ RS_______
-branchlong  PRED  1 0 L 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 LONG
-other       PRED  1 1 OP2 1 1 1 OPC_3 RT_______ OPC_5____ RD_______ RS_______
+            3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1
+            1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+alu short   PRED  0 ALUOPCO CONSTANT_________ ROTATEAMT RD_______ RS_______ 
+shift short PRED  0 4'b1000 0 0 0 0 0 0 0 SHF SHIFTAMT_ RD_______ RS_______ 
+alu long    PRED  1 ALUOPCO 0 0 0 0 0 0 0 0 0 0 0 0 0 0 RD_______ RS_______ LONG
+alu reg     PRED  1 ALUOPCO 1 0 0 0 RT_______ ROTATEAMT RD_______ RS_______
+loadstore   PRED  1 LSUOP 0 1 1 OFFSET_________________ RD_______ RS_______
+branchreg   PRED  1 0 L 0 1 1 1 OFFSET___________________________ RS_______
+branchlong  PRED  1 0 L 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 LONG
+other       PRED  1 1 OP1 1 1 1 OP2 RT_______ OPC_3____ RD_______ RS_______
