@@ -56,11 +56,29 @@ OTHER_OPCODE[8:0] = {OP1[1:0], OP2[1:0], OPC_3[4:0]} =
 
             3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1
             1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-alu short   PRED  0 ALUOPCO CONSTANT_________ ROTATEAMT RD_______ RS_______ 
-shift short PRED  0 4'b1000 0 0 0 0 0 0 0 SHF SHIFTAMT_ RD_______ RS_______ 
+shift short PRED  0 4'b1000 0 0 SHF 0 0 0 0 0 SHIFTAMT_ RD_______ RS_______ 
+alu short   PRED  0 ALUOPCO CONSTANT___________ ROTAAMT RD_______ RS_______ 
 alu long    PRED  1 ALUOPCO 0 0 0 0 0 0 0 0 0 0 0 0 0 0 RD_______ RS_______ LONG
-alu reg     PRED  1 ALUOPCO 1 0 0 0 RT_______ ROTATEAMT RD_______ RS_______
+shift reg   PRED  1 4'b1000 1 0 SHF RT_______ 0 0 0 0 0 RD_______ RS_______ 
+alu reg     PRED  1 ALUOPCO 1 0 SHF RT_______ SHIFTAMT_ RD_______ RS_______
 loadstore   PRED  1 LSUOP 0 1 1 OFFSET_________________ RD_______ RS_______
-branchreg   PRED  1 0 L 0 1 1 1 OFFSET___________________________ RS_______
+branchabs   PRED  1 0 L 0 1 1 1 0 OFFSET_________________________ RS_______
+branchrel   PRED  1 0 L 0 1 1 1 1 OFFSET_________________________ RS_______
 branchlong  PRED  1 0 L 1 1 1 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 LONG
 other       PRED  1 1 OP1 1 1 1 OP2 RT_______ OPC_3____ RD_______ RS_______
+
+shift short: rd <- rs SHF SHIFTAMT
+             redundant with "alu reg", if there is a zero register
+alu short:   rd <- rs ALU (CONSTANT ROR {ROTAAMT,1'b0})
+alu long:    rd <- rs ALU LONG
+shift reg:   rd <- rs SHF rt
+alu reg:     rd <- rs ALU (rt SHF SHIFTAMT)
+loadstore:   LSUOP rd, OFFSET(rs)
+branchabs:   newPC <- rs + {offset,4'b0000}
+branchrel:   newPC <- pc + rs + {offset,4'b0000}
+branchlong:  newPC <- LONG
+other:       other
+
+Thoughts -- can we get rid of the 4'b1000 SHIFT encoding, and free up an ALU
+opcode?
+
