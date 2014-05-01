@@ -1,0 +1,68 @@
+Encodings:
+
+PRED[2:0] = {pred_num[1:0], pred_true_comp_n}
+ALUOPCO[3:0] =
+  ADD       : 4'b0000 |
+  AND       : 4'b0001 |
+  NOR       : 4'b0010 |
+  OR        : 4'b0011 |
+  SUB       : 4'b0100 |
+  RSB       : 4'b0101 |
+  XOR       : 4'b0110 |
+  MOV       : 4'b0111 |
+  ???       : 4'b1000 |
+  reserved  : 4'b1001 |
+  SXB       : 4'b1010 |
+  SXH       : 4'b1011 |
+  CMPLT     : 4'b1100 |
+  CMPLE     : 4'b1101 |
+  CMPEQ     : 4'b1110 |
+  reserved  : 4'b1111
+
+SHIFT[1:0] =    /* "SHF" */
+  SLL : 2'b00 |
+  SRA : 2'b01 |
+  SRL : 2'b10 |
+  ROR : 2'b11
+
+LSUOPCO[2:0] =
+  LB : 3'b000 |
+  LH : 3'b001 |
+  LW : 3'b010 |
+  LL : 3'b011 |
+  SB : 3'b100 |
+  SH : 3'b101 |
+  SW : 3'b110 |
+  SC : 3'b111
+
+L[0] = 
+  NOLINK : 1'b0 |
+  LINK   : 1'b1
+
+OTHER_OPCODE[8:0] = {OP1[1:0], OP2[1:0], OPC_3[4:0]} =
+  RESV0   : 9'b00_00_00000
+  BREAK   : 9'b00_01_xxxxx
+  SYSCALL : 9'b00_10_xxxxx
+  FENCE   : 9'b00_11_xxxxx
+  ERET    : 9'b01_00_xxxxx
+  CPOP    : 9'b01_01_xxxxx
+  MFC     : 9'b01_10_xxxxx
+  MTC     : 9'b01_11_xxxxx
+  MULT    : 9'b10_00_xxxxx
+  DIV     : 9'b10_01_xxxxx
+  MFHI    : 9'b10_10_xxxxx
+  MTHI    : 9'b10_11_xxxxx
+  SIMD?   : 9'b11_xx_xxxxx
+
+            3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1
+            1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
+mov short   PRED_ 0 CONSTANT_HIGH____________ R ALUOPCO RD_______ CONST_LOW 
+alu short   PRED_ 0 CONSTANT___________ ROTATE_ ALUOPCO RD_______ RS_______ 
+alu reg     PRED_ 1 0 1 SHIFTAMT_ SHF RT_______ ALUOPCO RD_______ RS_______ 
+loadstore   PRED_ 1 0 0 1 OFFSET_________________ LSUOP RD_______ RS_______ 
+branchimm   PRED_ 1 1 0 L OFFSET___________________________________________ 
+branchreg   PRED_ 1 1 1 L OFFSET_________________________________ RS_______ 
+other       PRED_ 1 0 0 0 1 OPC_3____ RT_______ OP1 OP2 RD_______ RS_______ 
+shift short PRED_ 1 0 0 0 0 1 0 0 SHF SHIFTAMT_ 0 0 0 0 RD_______ RS_______ 
+shift reg   PRED_ 1 0 0 0 0 1 1 0 SHF RT_______ 0 0 0 0 RD_______ RS_______ 
+alu long    PRED_ 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ALUOPCO RD_______ 0 0 0 0 0 LONG
