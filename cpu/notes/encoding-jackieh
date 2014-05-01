@@ -91,37 +91,3 @@ other       : other
 shift short : rd <- rs SHF SHIFTAMT
 shift reg   : rd <- rs SHF rt
 alu long    : rd <- rs ALU LONG
-
-Another idea for encoding:
-
-            3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1
-            1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-mov short   PRED_ 0 CONSTANT_HIGH____________ R ALUOPCO RD_______ CONST_LOW 
-alu short   PRED_ 0 CONSTANT_HI ROTATE_ CNSTLOW ALUOPCO RD_______ RS_______ 
-alu reg     PRED_ 1 0 1 SHIFTAMT_ SHF RT_______ ALUOPCO RD_______ RS_______ 
-loadstore   PRED_ 1 0 0 1 OFFSET_________________ LSUOP RD_______ RS_______ 
-branchimm   PRED_ 1 1 0 L OFFSET___________________________________________ 
-branchreg   PRED_ 1 1 1 L OFFSET_________________________________ RS_______ 
-other       PRED_ 1 0 0 0 1 OPC_1____ RT_______ OPC_2__ RD_______ RS_______ 
-cmplt short PRED_ 1 0 0 0 0 0 1 ROTATE_ CONSTANT___________ PN___ RS_______ 
-cmple short PRED_ 1 0 0 0 0 1 0 ROTATE_ CONSTANT___________ PN___ RS_______ 
-cmpeq short PRED_ 1 0 0 0 0 1 1 ROTATE_ CONSTANT___________ PN___ RS_______ 
-cmplt reg   PRED_ 1 0 0 0 0 0 0 1 ? ? RT_______ 0 1 ROTATE_ PN___ RS_______ 
-cmple reg   PRED_ 1 0 0 0 0 0 0 1 ? ? RT_______ 1 0 ROTATE_ PN___ RS_______ 
-cmpeq reg   PRED_ 1 0 0 0 0 0 0 1 ? ? RT_______ 1 1 ROTATE_ PN___ RS_______ 
-shift reg   PRED_ 1 0 0 0 0 0 0 1 SHF RT_______ 0 0 ? 0 RD_______ RS_______ 
-shift short PRED_ 1 0 0 0 0 0 0 1 SHF SHIFTAMT_ 0 0 ? 1 RD_______ RS_______ 
-alu long    PRED_ 1 0 0 0 0 0 0 0 ? ? ? ? ? ? ? ALUOPCO RD_______ RS_______ LONG
-
-mov short   : rd <- CONSTANT[17:0] ROR {R,4'b0}
-alu short   : rd <- rs ALU (CONSTANT[9:0] ROR {ROTATE,1'b0})
-alu reg     : rd <- rs ALU (rt SHF SHIFTAMT)
-loadstore   : LSUOP rd, OFFSET[11:0](rs)
-branchimm   : rd <- pc + {OFFSET[24:0], 4'b0000}
-branchreg   : rd <- rs + {OFFSET[19:0], 4'b0000}
-other       : other[8:0]
-cmp* short  : pn <- rs CMP CONSTANT[9:0] ROR {ROTATE,1'b0}
-cmp* reg    : pn <- rs CMP rt
-shift reg   : rd <- rs SHF rt
-shift short : rd <- rs SHF SHIFTAMT
-alu long    : rd <- rs ALU LONG
