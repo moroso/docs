@@ -67,6 +67,17 @@ shift short PRED_ 1 0 0 0 0 1 0 ? SHF SHIFTAMT_ ? ? ? ? RD_______ RS_______
 shift reg   PRED_ 1 0 0 0 0 1 1 ? SHF RT_______ ? ? ? ? RD_______ RS_______ 
 alu long    PRED_ 1 0 0 0 0 0 0 ? ? ? ? ? ? ? ? ALUOPCO RD_______ RS_______ LONG
 
+mov short   : rd <- CONSTANT[17:0] ROR {R,4'b0}
+alu short   : rd <- CONSTANT[9:0] ROR {ROTATE,1'b0}
+alu reg     : rd <- rs ALU (rt SHF SHIFTAMT)
+loadstore   : LSUOP rd, OFFSET[11:0](rs)
+branchimm   : rd <- pc + {OFFSET[24:0], 4'b0000}
+branchreg   : rd <- rs + {OFFSET[19:0], 4'b0000}
+other       : other
+shift short : rd <- rs SHF SHIFTAMT
+shift reg   : rd <- rs SHF rt
+alu long    : rd <- rs ALU LONG
+
 Another idea for encoding:
 
             3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1
@@ -87,3 +98,16 @@ cmpeq reg   PRED_ 1 0 0 0 0 0 0 1 ? ? RT_______ 1 1 ROTATE_ PN___ RS_______
 shift reg   PRED_ 1 0 0 0 0 0 0 1 ? ? RT_______ 0 0 ? 0 RD_______ RS_______ 
 shift short PRED_ 1 0 0 0 0 0 0 1 ? ? SHIFTAMT_ 0 0 ? 1 RD_______ RS_______ 
 alu long    PRED_ 1 0 0 0 0 0 0 0 ? ? ? ? ? ? ? ALUOPCO RD_______ RS_______ LONG
+
+mov short   : rd <- CONSTANT[17:0] ROR {R,4'b0}
+alu short   : rd <- CONSTANT[9:0] ROR {ROTATE,1'b0}
+alu reg     : rd <- rs ALU (rt SHF SHIFTAMT)
+loadstore   : LSUOP rd, OFFSET[11:0](rs)
+branchimm   : rd <- pc + {OFFSET[24:0], 4'b0000}
+branchreg   : rd <- rs + {OFFSET[19:0], 4'b0000}
+other       : other[8:0]
+cmp* short  : pn <- rs CMP CONSTANT[9:0] ROR {ROTATE,1'b0}
+cmp* reg    : pn <- rs CMP rt
+shift reg   : rd <- rs SHF rt
+shift short : rd <- rs SHF SHIFTAMT
+alu long    : rd <- rs ALU LONG

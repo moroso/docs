@@ -69,13 +69,13 @@ other       PRED  1 1 OP1 1 1 1 OP2 RT_______ OPC_3____ RD_______ RS_______
 
 shift short: rd <- rs SHF SHIFTAMT
              redundant with "alu reg", if there is a zero register
-alu short:   rd <- rs ALU (CONSTANT ROR {ROTAAMT,1'b0})
+alu short:   rd <- rs ALU (CONSTANT[9:0] ROR {ROTAAMT,1'b0})
 alu long:    rd <- rs ALU LONG
 shift reg:   rd <- rs SHF rt
 alu reg:     rd <- rs ALU (rt SHF SHIFTAMT)
-loadstore:   LSUOP rd, OFFSET(rs)
-branchabs:   newPC <- rs + {offset,4'b0000}
-branchrel:   newPC <- pc + rs + {offset,4'b0000}
+loadstore:   LSUOP rd, OFFSET[11:0](rs)
+branchabs:   newPC <- rs + {OFFSET[15:0],4'b0000}
+branchrel:   newPC <- pc + rs + {OFFSET[15:0],4'b0000}
 branchlong:  newPC <- LONG
 other:       other
 
