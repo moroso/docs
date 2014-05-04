@@ -56,20 +56,20 @@ Programs are able to request access to I/O and device memory via syscalls, and
 then manipulate these resources via the appropriate servers: for
 instance, a thread that wants to write to a frame buffer might undergo
 the following:
-1. Thread 1 requests a frame buffer using the get_frame_buffer syscall
-2. Kernel responds to the syscall by allocating a buffer with ID 4 to
+- Thread 1 requests a frame buffer using the get_frame_buffer syscall
+- Kernel responds to the syscall by allocating a buffer with ID 4 to
 Thread 1, and returning this ID
-3. get_frame_buffer returns to Thread 1 with buffer ID 4
-4. Thread 1 sends a use_frame_buffer request to the Console Server with
+- get_frame_buffer returns to Thread 1 with buffer ID 4
+- Thread 1 sends a use_frame_buffer request to the Console Server with
 buffer ID 4
-5. Console Server receives request from Thread 1 with buffer ID 4
-6. Console Server decides whether the request should succeed based on
+- Console Server receives request from Thread 1 with buffer ID 4
+- Console Server decides whether the request should succeed based on
 console privileges and allocations.
-    6a) If the request should succeed, Console Server calls the
+    - If the request should succeed, Console Server calls the
     use_frame_buffer syscall with TID 1 and buffer ID 4
-        6ai) kernel verifies that Thread 1 has access to buffer 4, and completes
+        - kernel verifies that Thread 1 has access to buffer 4, and completes
         the write to the mapped address
-    6b) if the request should fail, the Console Server ignores it
+    - if the request should fail, the Console Server ignores it
 
 The same protocol can be used for other I/O resources, such as sound.  
 
