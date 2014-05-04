@@ -69,12 +69,12 @@ console privileges and allocations.
     - If the request should succeed, Console Server calls the
     use_frame_buffer syscall with TID 1 and buffer ID 4
         - kernel verifies that Thread 1 has access to buffer 4, and completes
-        the write to the mapped address
+        the write to the console
     - if the request should fail, the Console Server ignores it
 
 The same protocol can be used for other I/O resources, such as sound.  
 
-Additionally, there kernel and hardware will have no notion of text, so we will have
+Additionally, the kernel and hardware will have no notion of text, so we will have
 instead a text-mode server that manages text-based display services. 
 
 Expect VGA graphics.  
@@ -116,7 +116,7 @@ is going to get done in userland (the same almost certainly goes for
 console manipulation).  Furthermore, an IPC model may allow us to do
 something a little more clever than deschedule/make\_runnable.     
 
-Pebbles uses an arguably hackish memory model that involves direct
+Pebbles uses an arguably hackish memory layout that involves direct
 mapping n pages of memory and calling it a kernel; we will probably want
 to look this over and decide if MorosOS would benefit from another
 approach.
@@ -144,7 +144,7 @@ begin development should go here.
   Some components that immediately come to mind are the memory
 allocators.  This will be tricky because we need to ensure that pages
 being used for kernel memory do not get mapped out to processes.
-Debugging facilities will also want asserts and, and maybe even some
+Debugging facilities will also want asserts, and maybe even some
 form of outputting text to a debug console.    
 
 ## Conversations to have with other teams ##
