@@ -37,7 +37,7 @@ kernel for boot).
 Like other microkernels, we use IPC to implement cross-address space
 communication.  The kernel is divided into a handful of individual
 processes we call "servers" (see image above), and use these messages to
-request "services" from one another.  If possible, we want to steal some
+request services from one another.  If possible, we want to steal some
 performance tricks from the [L4 IPC
 approach](http://www.read.seas.harvard.edu/~kohler/class/aosref/liedtke93improving.pdf):
 completely synchronous
@@ -50,14 +50,30 @@ model is very up in the air.
 
 ## I/O and Userland ##
 Since we're placing a lot of key services there, the MorosOS userland
-is going to be big, and that's going to be our problem.  The display
-server manages which thread of execution controls the display, and file
-server takes care of storage services. Video memory will be mapped into
-userland, and will need to be managed and/or divided between programs
-somehow, but how exactly we want to go about doing that is up-in-the-air
-(there is also talk of full memory-mapped I/O, but it's not yet clear
-whether this makes the most sense for all our devices).  Additionally,
-there kernel and hardware will have no notion of text, so we will have
+is going to be big, and that's going to be our problem.  
+
+Programs are able to request access to I/O and device memory via syscalls, and
+then manipulate these resources via the appropriate servers: for
+instance, a thread that wants to write to a frame buffer might undergo
+the following:
+1. Thread 1 requests a frame buffer using the get_frame_buffer syscall
+2. Kernel responds to the syscall by allocating a buffer with ID 4 to
+Thread 1, and returning this ID
+3. get_frame_buffer returns to Thread 1 with buffer ID 4
+4. Thread 1 sends a use_frame_buffer request to the Console Server with
+buffer ID 4
+5. Console Server receives request from Thread 1 with buffer ID 4
+6. Console Server decides whether the request should succeed based on
+console privileges and allocations.
+    6a) If the request should succeed, Console Server calls the
+    use_frame_buffer syscall with TID 1 and buffer ID 4
+        6ai) kernel verifies that Thread 1 has access to buffer 4, and completes
+        the write to the mapped address
+    6b) if the request should fail, the Console Server ignores it
+
+The same protocol can be used for other I/O resources, such as sound.  
+
+Additionally, there kernel and hardware will have no notion of text, so we will have
 instead a text-mode server that manages text-based display services. 
 
 Expect VGA graphics.  
@@ -101,7 +117,7 @@ something a little more clever than deschedule/make\_runnable.
 
 Pebbles uses an arguably hackish memory model that involves direct
 mapping n pages of memory and calling it a kernel; we will probably want
-to look this over and decide if MorosoOS would benefit from another
+to look this over and decide if MorosOS would benefit from another
 approach.
 Since we have a software-loaded TLB, paging is now going to be the
 responsibility of the OS.  Essentially, what this looks like is if a
