@@ -36,7 +36,7 @@ kernel for boot).
 
 Like other microkernels, we use IPC to implement cross-address space
 communication.  The kernel is divided into a handful of individual
-processes we call "servers" (see image above), and use these messages to
+processes we call "servers" (see image above), which use these messages to
 request services from one another.  If possible, we want to steal some
 performance tricks from the [L4 IPC
 approach](http://www.read.seas.harvard.edu/~kohler/class/aosref/liedtke93improving.pdf):
@@ -56,9 +56,10 @@ Programs are able to request access to I/O and device memory via syscalls, and
 then manipulate these resources via the appropriate servers: for
 instance, a thread that wants to write to a frame buffer might undergo
 the following:
-- Thread 1 requests a frame buffer using the get_frame_buffer syscall
+- Thread 1 requests a frame buffer using the get_frame_buffer syscall, passing
+  address 0xADD as its argument
 - Kernel responds to the syscall by allocating a buffer with ID 4 to
-Thread 1, and returning this ID
+Thread 1, mapping the buffer to 0xADD and returning the ID
 - get_frame_buffer returns to Thread 1 with buffer ID 4
 - Thread 1 sends a use_frame_buffer request to the Console Server with
 buffer ID 4
