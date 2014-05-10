@@ -144,6 +144,34 @@ collabortive effort between us and hardware.
 We have no notion of segments, and the hardware has no notion of an IDT.     
 Hardware is making something close to MIPs' SYSCALL/SYSRET instructions for mode
 switch.   
+## Interprocess Communication ##
+
+Since IPC is going to be the backbone of our system, it is important
+that we have a performant and usable IPC mechanism.
+There is a lot of design space for IPC mechanisms that I try to
+summarize without really knowing what I am doing:
+* Is send synchronous or asynchronous? (That is, does send block until
+there is a receiver, or are messages buffered?)
+* If send is synchronous, do we have a notion of message replies?
+* What are the "targets" for IPC messages? Threads or some sort of
+channel/mailbox thing? If we have mailboxes, do we have something like
+select()?
+* What is the payload of messages? Registers? Short buffers? Pages?
+Can we share pages or just send them?
+* What controls do we want for who can send messages to what targets?
+Do we want some sort of access control?
+
+
+I suspect that we want synchronous IPC with replies; that seems to
+correspond with RPC calls and it means we don't need to do message
+buffering in the kernel.
+
+I think we should be able to have a hella-optimized fast path for
+IPC send to threads that are already blocked. Especially for short
+messages that fit in registers, we could have an assembly fast path
+that looks the target up in a flat table, sees if a thread is waiting,
+and if so switches to that address space and thread and returns to
+userspace with the message in registers or something.
 
 ## Kernel Libraries ##
 A proposed breakdown of library work was the following: all functions
