@@ -118,13 +118,16 @@ to. Furthermore, an IPC model may allow us to do something a little
 more clever than deschedule/make\_runnable.
 
 Pebbles uses an arguably hackish memory layout that involves direct
-mapping n pages of memory and calling it a kernel; we will probably want
+mapping N pages of memory and calling it kernel memory; we will probably want
 to look this over and decide if MorosOS would benefit from another
 approach.
+
 We are probably doing a pretty standard page table setup.
 
-MorosOS will implement COW for fork. We should pass syscall arguments
-in registers instead of using "syscall packets".
+MorosOS will implement COW for fork.
+
+We should pass syscall arguments in registers instead of using
+"syscall packets".
 
 ## Kernel Libraries ##
 A proposed breakdown of library work was the following: all functions
