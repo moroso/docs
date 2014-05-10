@@ -11,7 +11,7 @@ following:
   * Virtualizing hardware resources
   * Scheduling/providing a uniform execution environment
 
-While a lot of elements are still open for discussion, as few things are
+While a lot of elements are still open for discussion, a few things are
 clear: we will have a microkernel that uses an IPC model to communicate
 between userland services, as well as a set of core components modeled
 loosely after the 410 Pebbles kernel, and a standard library to aid
@@ -98,12 +98,14 @@ we've decided to do some things in a
 conventional manner, and Pebbles provides a good shared language to talk
 about such things as a team.
 
+*Note however, that an alternate reality exits.  The team could conisder using POSIX, or abandoning standard models
+entirely in favor of coming up with something new.*
+
 First and foremost, our kernel will have the following Pebbles syscalls: 
 * fork/exec 
 * thread\_fork
-* wait/vanish
+* thread vanish
 * get_ticks
-* sleep
 * new\_pages/remove\_pages
 * gettid
 * yield.  
@@ -114,7 +116,8 @@ API, but may exist in a very different way than their Pebbles
 implementation: for instance, I have a hunch a lot more of the legwork
 is going to get done in userland (the same almost certainly goes for
 console manipulation).  Furthermore, an IPC model may allow us to do
-something a little more clever than deschedule/make\_runnable.     
+something a little more clever than deschedule/make\_runnable, wait (and maybe
+sleep).     
 
 Pebbles uses an arguably hackish memory layout that involves direct
 mapping n pages of memory and calling it a kernel; we will probably want
@@ -129,6 +132,9 @@ MorosOS will implement COW for fork.  It also wouldn't hurt to consider
 something other than 410's "argument packet" model for passing arguments
 to syscalls (like, I dunno, specifying a convention for using multiple
 registers)   
+
+Someone (I think us) will have to write a bootloader.  This will be a
+collabortive effort between us and hardware.
 
 ## Kernel Libraries ##
 A proposed breakdown of library work was the following: all functions
@@ -146,6 +152,9 @@ allocators.  This will be tricky because we need to ensure that pages
 being used for kernel memory do not get mapped out to processes.
 Debugging facilities will also want asserts, and maybe even some
 form of outputting text to a debug console.    
+
+We will also want to operations found in the standard/string library, such as memset,
+memcpy, strlen, printf stuff
 
 ## Conversations to have with other teams ##
 As the OS acts as the glue that holds the other parts of the system
