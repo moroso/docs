@@ -1,0 +1,86 @@
+Pred: Predicate bits
+Type: Instruction class
+Opcode: ALU opcode
+Rd: Destination register
+Rs: Source register
+L: Whether or not the operand is a long immediate
+I: Whether or not the second operand is an immediate
+
+
+MOV short immediate
+===================
+ _____________________________________________________________________
+ |      |      |            |         |            |         |       |
+ | Pred | Type | Opcode     | Rd      | Immed_16   | Immed_1 | L = 0 |
+ |______|______|____________|_________|____________|_________|_______|
+  31  29 28  27 26        23 22     18 17         2 1         0
+
+Immed_16: Immediate to be moved into destination register
+Immed_1: Whether or not we shift Immed_16 by 16 places
+
+
+MOV long immediate
+==================
+ _______________________________________________________
+ |      |      |            |         |        |       |
+ | Pred | Type | Opcode     | Rd      | ???    | L = 1 |
+ |______|______|____________|_________|________|_______|
+  31  29 28  27 26        23 22     18 17     1 0
+
+32-bit long immediate in the next instruction
+
+
+MOV register
+============
+
+Equivalent to "OR rd, rs, 0"
+
+
+Compare immediate
+=================
+ ______________________________________________________________________________________
+ |      |      |            |         |      |         |            |         |       |
+ | Pred | Type | Opcode     | Pn      | ???  | Rs      | Immed_8    | Immed_4 | I = 1 |
+ |______|______|____________|_________|______|_________|____________|_________|_______|
+  31  29 28  27 26        23 22     20 19  18 17     13 12         5 4       1 0
+
+Immed_8: Second operand immediate
+Immed_4: Amount we rotate the second operand immediate (divided by 2)
+
+
+Compare register
+================
+ ________________________________________________________________________________________________
+ |      |      |            |        |      |         |         |            |          |       |
+ | Pred | Type | Opcode     | Pn     | ???  | Rs      | Rt      | Immed_5    | Shift    | I = 0 |
+ |______|______|____________|________|______|_________|_________|____________|__________|_______|
+  31  29 28  27 26        23 22    20 19  18 17     13 12      8 7          3 2        1 0
+
+Rt: Second operand register
+Immed_5: Amount we shift second operand register
+Shift: Shift type (logical left, logical right, arithmetic right, rotate right)
+
+
+Other ALU op immediate
+======================
+ _______________________________________________________________________________
+ |      |      |            |         |         |            |         |       |
+ | Pred | Type | Opcode     | Rd      | Rs      | Immed_8    | Immed_4 | I = 1 |
+ |______|______|____________|_________|_________|____________|_________|_______|
+  31  29 28  27 26        23 22     18 17     13 12         5 4       1 0
+
+Immed_8: Second operand immediate
+Immed_4: Amount we rotate the second operand immediate (divided by 2)
+
+
+Other ALU op register
+=====================
+ __________________________________________________________________________________________
+ |      |      |            |         |         |         |            |          |       |
+ | Pred | Type | Opcode     | Rd      | Rs      | Rt      | Immed_5    | Shift    | I = 0 |
+ |______|______|____________|_________|_________|_________|____________|__________|_______|
+  31  29 28  27 26        23 22     18 17     13 12         8 7          3 2        1 0
+
+Rt: Second operand register
+Immed_5: Amount we shift second operand register
+Shift: Shift type (logical left, logical right, arithmetic right, rotate right)

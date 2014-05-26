@@ -47,6 +47,8 @@ B rs, short_imm
 BL rs, short_imm
   BL long_imm
 
+Note that branchreg is newpc <- pc + 16 + signextend(offset[17:0]) + rs.
+
 ERET
   kill LL
   PC <- EPC
@@ -59,8 +61,6 @@ CPOP oper
 Load-store
 ==========
 
-CACHE op, ofs(base)
-
 LB/LH/LW/LL rd, ofs(base)
   LBI/LHI/LWI/LLI rd, long_imm
 
@@ -72,14 +72,12 @@ FENCE
 Multiplier
 ==========
 
-DIV rs, rt
-  hi = rs / rt
-  lo = rs % rt
+DIV rd, rs, rt
+  rd = rs / rt
+  hi = rs % rt
 
-MULT rs, rt
-  {hi,lo} = rs * rt
+MULT rd, rs, rt
+  {hi,rd} = rs * rt
 
 MFHI rd
-MFLO rd
 MTHI rs
-MTLO rs
