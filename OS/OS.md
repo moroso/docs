@@ -89,7 +89,7 @@ does](http://www.minix3.ru/docs/herder_thesis.pdf) (see page 27): a set of
 syscalls allow a device to install an interrupts policy for the given device:
 all interrupts are then handled by a generic handler, which uses these policies
 to determine which drivers should be notified and if the contents of a device
-register should be echoed to them.  
+register should be echoed to them.
 
 We are also going to have a thread library that will be similar in
 objective to 410 P2.  Other than the strange conventions, this should be
@@ -122,28 +122,43 @@ certainly subsume wait and sleep (using timeouts), but we may not want
 to. Furthermore, an IPC model may allow us to do something a little
 more clever than deschedule/make\_runnable.
 
-So far, I think this is how the memory layout looks: the memory where the kernel
-code is located is reserved from allocation: the rest is available to kernel
-and user memory.  Pebbles adresses this by fixing user and kernel address
-spaces, but our allocator will be able to dynamically change this (start with
-fixed, maybe, for debugging).  When either
-allocator needs more memory, it will invoke some logic to determine where
-available memory can be found, and what logical addresses are available. 
-
-We are probably doing a pretty standard page table setup.
-
-MorosOS will implement COW for fork.
-
 We should pass syscall arguments in registers instead of using
 "syscall packets".
 
 We will have to write a bootloader.  This will be a
 collabortive effort between us and hardware.
 
-*Hardware note* 
-We have no notion of segments, and the hardware has no notion of an IDT.     
+*Memory management*
+
+So far, I think this is how the memory layout looks: the memory where
+the kernel code is located is reserved from allocation: the rest is
+available to kernel and user memory. I think we should reserve 1gb of
+address space of the kernel (this is what x86 linux does, I think). So
+that we don't need to relocate the kernel after paging has been seen
+up, I think it should be the bottom gb.
+
+Since we don't want to fix a particular amount of memory for kernel
+use, we want the kernel memory allocator to allocate memory from the
+system frame allocator. Since we want to be able to free memory from
+the kernel allocator back to the frame allocator, we need to also have
+a manager for kernel virtual address space. Since we need to be able
+to allocate large physical memory contiguous buffers for device
+drivers (frame buffers, etc), the frame allocator needs to support
+this. I think we can use the same data structure for both the physical
+frame allocator and the kernel address space allocator: the buddy
+allocator (http://en.wikipedia.org/wiki/Buddy_allocator). I think
+probably we make the minimum block size 4kb and the maximum one 4mb?
+
+To map in our page tables I think we should do the "Y combinator VM
+trick" in which the page directory is used as a page table.
+
+MorosOS will implement COW for fork.
+
+
+*Hardware note*
+We have no notion of segments, and the hardware has no notion of an IDT.
 Hardware is making something close to MIPs' SYSCALL/SYSRET instructions for mode
-switch.   
+switch.
 ## Interprocess Communication ##
 
 Since IPC is going to be the backbone of our system, it is important
