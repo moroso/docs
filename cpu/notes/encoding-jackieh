@@ -75,8 +75,8 @@ loadstore   PRED_ 1 0 0 1 OFFSET_________________ LSUOP RD_______ RS_______
 branchimm   PRED_ 1 1 0 L OFFSET___________________________________________ 
 branchreg   PRED_ 1 1 1 L OFFSET_________________________________ RS_______ 
 other       PRED_ 1 0 0 0 1 OPC_1____ RT_______ OPC_2__ RD_______ RS_______ 
-shift short PRED_ 1 0 0 0 0 1 0 ? SHF SHIFTAMT_ ? ? ? ? RD_______ RS_______ 
-shift reg   PRED_ 1 0 0 0 0 1 1 ? SHF RT_______ ? ? ? ? RD_______ RS_______ 
+shift short PRED_ 1 0 0 0 0 1 0 ? SHF SHIFTAMT_ 0 1 1 1 RD_______ RS_______ 
+shift reg   PRED_ 1 0 0 0 0 1 1 ? SHF RT_______ 0 1 1 1 RD_______ RS_______ 
 alu long    PRED_ 1 0 0 0 0 0 0 ? ? ? ? ? ? ? ? ALUOPCO RD_______ RS_______ LONG
 
 mov short   : rd <- CONSTANT[17:0] ROR {R,4'b0}
