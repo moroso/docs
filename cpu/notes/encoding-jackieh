@@ -85,7 +85,7 @@ compare shor: pn <- rs COMPARE (CONSTANT[9:0] ROR {ROTATE,1'b0})
 alu reg     : rd <- rs ALU (rt SHF SHIFTAMT)
 compare reg : pn <- rs COMPARE (rt SHF SHIFTAMT)
 loadstore   : LSUOP rd, OFFSET[11:0](rs)
-branchimm   : rd <- pc + {OFFSET[24:0], 4'b0000}
+branchimm   : rd <- pc + {{4{OFFSET[24]}, OFFSET[23:0], 4'b0000}
 branchreg   : rd <- rs + {OFFSET[19:0], 4'b0000}
 other       : other
 shift short : rd <- rs SHF SHIFTAMT
