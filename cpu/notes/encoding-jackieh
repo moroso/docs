@@ -9,15 +9,15 @@ ALUOPCO[3:0] =
   SUB       : 4'b0100 |
   RSB       : 4'b0101 |
   XOR       : 4'b0110 |
-  MOV       : 4'b0111 |
-  MVN       : 4'b1000 |
-  reserved  : 4'b1001 |
+  COMPARE   : 4'b0111 |
+  MOV       : 4'b1000 |
+  MVN       : 4'b1001 |
   SXB       : 4'b1010 |
   SXH       : 4'b1011 |
   reserved  : 4'b1100 |
   reserved  : 4'b1101 |
   reserved  : 4'b1110 |
-  COMPARE   : 4'b1111
+  reserved  : 4'b1111
 
 COMPARE_TYPE[2:0] = /* "CMPTP" */
   CMPLTU : 3'b000 |
