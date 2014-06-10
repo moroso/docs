@@ -9,15 +9,15 @@ ALUOPCO[3:0] =
   SUB       : 4'b0100 |
   RSB       : 4'b0101 |
   XOR       : 4'b0110 |
-  MOV       : 4'b0111 |
-  reserved  : 4'b1000 |
-  reserved  : 4'b1001 |
+  COMPARE   : 4'b0111 |
+  MOV       : 4'b1000 |
+  MVN       : 4'b1001 |
   SXB       : 4'b1010 |
   SXH       : 4'b1011 |
   reserved  : 4'b1100 |
   reserved  : 4'b1101 |
   reserved  : 4'b1110 |
-  COMPARE   : 4'b1111
+  reserved  : 4'b1111
 
 COMPARE_TYPE[2:0] = /* "CMPTP" */
   CMPLTU : 3'b000 |
@@ -75,9 +75,8 @@ loadstore   PRED_ 1 0 0 1 OFFSET_________________ LSUOP RD_______ RS_______
 branchimm   PRED_ 1 1 0 L OFFSET___________________________________________ 
 branchreg   PRED_ 1 1 1 L OFFSET_________________________________ RS_______ 
 other       PRED_ 1 0 0 0 1 OPC_1____ RT_______ OPC_2__ RD_______ RS_______ 
-shift short PRED_ 1 0 0 0 0 1 0 ? SHF SHIFTAMT_ ? ? ? ? RD_______ RS_______ 
-shift reg   PRED_ 1 0 0 0 0 1 1 ? SHF RT_______ ? ? ? ? RD_______ RS_______ 
-alu long    PRED_ 1 0 0 0 0 0 0 ? ? ? ? ? ? ? ? ALUOPCO RD_______ RS_______ LONG
+shift reg   PRED_ 1 0 0 0 0 0 0 1 SHF RT_______ 0 1 1 1 RD_______ RS_______ 
+alu long    PRED_ 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ALUOPCO RD_______ RS_______ LONG
 
 mov short   : rd <- CONSTANT[17:0] ROR {R,4'b0}
 alu short   : rd <- rs ALU (CONSTANT[9:0] ROR {ROTATE,1'b0})
@@ -85,7 +84,7 @@ compare shor: pn <- rs COMPARE (CONSTANT[9:0] ROR {ROTATE,1'b0})
 alu reg     : rd <- rs ALU (rt SHF SHIFTAMT)
 compare reg : pn <- rs COMPARE (rt SHF SHIFTAMT)
 loadstore   : LSUOP rd, OFFSET[11:0](rs)
-branchimm   : rd <- pc + {OFFSET[24:0], 4'b0000}
+branchimm   : rd <- pc + {{4{OFFSET[24]}, OFFSET[23:0], 4'b0000}
 branchreg   : rd <- rs + {OFFSET[19:0], 4'b0000}
 other       : other
 shift short : rd <- rs SHF SHIFTAMT
