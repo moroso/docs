@@ -1,0 +1,624 @@
+\documentclass[11pt,openany]{report}
+\usepackage[margin=1in]{geometry}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+\usepackage{array}
+\setlength{\headheight}{15.2pt}
+\pagestyle{fancy}
+\title{OSOROM Instruction Set Reference}
+\author{The Moroso Project}
+\setlength{\tabcolsep}{4pt}
+\setcounter{tocdepth}{1}
+
+\begin{document}
+\lhead{The Moroso Project}
+\chead{OSOROM Instruction Set Reference}
+\rhead{v0.1}
+\maketitle
+\tableofcontents
+
+\chapter{CPU Architecture}
+
+\section{Instructions}
+Each instruction is a 32-bit word, stored in little-endian order. The top 2 bits of the instruction select one of four predicate registers, and the third bit from the top optionally inverts it. The instruction is only executed if the resulting predicate is true.
+
+\section{VLIW}
+At each time step, the CPU fetches a ``packet'' of 4 instructions located contiguously in memory and executes them in parallel. These packets must be aligned to their 16-byte size, and branch targets must also be so aligned. 
+
+There are three types of instructions: Control, Memory, and ALU instructions. Only one control instruction may be executed in any given packet; it must occupy the first (lowest-address) slot in its packet. Likewise, only the first two slots in a packet may execute memory instructions. ALU instructions may be located in any slot.
+
+ALU instructions in the first three slots may optionally specify a ``long immediate'' operand. In this case, the 32 bits following that instruction are interpreted as an operand, and a no-op is scheduled in the following slot of that packet.
+
+\section{Registers}
+There are 32 32-bit general-purpose registers, R0 through R31. R31 is used as the link register for BL instructions. The program counter is stored separately, and may only be modified through branch instructions and read through BL instructions. 
+
+There are three one-bit predicate registers that may be written to by compare instructions and used to conditionally execute any instruction. 
+
+\section{Shifting}
+The ALU is preceded by a shifter for its second operand
+
+\section{Virtual Memory}
+Virtual memory is accomplished through a hardware-filled TLB, with 4KB pages and a 2-level page-table structure that looks like x86's without any of the fancy bits. (more detail to come in this section; in particular, we want to boot with paging on but it's not clear how the world looks then) 
+
+\section{Exceptions}
+
+\chapter{Instruction Listing}
+
+\pagebreak
+\section{ADD}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Behavior}
+The first form adds the value \texttt{CONSTANT ROR 2*ROTATE} to \texttt{RS}, storing the result in \texttt{RD}.
+The second form shifts the value in \texttt{RT} in the manner specified by \texttt{SHF} and \texttt{SHIFTAMT}, then adds that to \texttt{RS} and stores the result in \texttt{RD}.
+The third form adds the long immediate stored in the next instruction slot to \texttt{RS} and stores the result in \texttt{RD}. A no-op is issued for the next instruction slot.
+
+\pagebreak
+\section{AND}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+
+\pagebreak
+\section{B}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 1 & 0 & 0 & \multicolumn{25}{|c|}{OFFSET}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 1 & 1 & 0 & \multicolumn{20}{|c|}{OFFSET} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{BL}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 1 & 0 & 1 & \multicolumn{25}{|c|}{OFFSET}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 1 & 1 & 1 & \multicolumn{20}{|c|}{OFFSET} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{BREAK}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & \multicolumn{1}{c|}{X} \\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{CMP}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+TODO do we want one entry for all compares that lists the types, or an entry for each one?
+
+\pagebreak
+\section{CPOP}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 0 & 1 & \multicolumn{1}{|c|}{C} & X & X & X & X & X & \multicolumn{4}{|c|}{CPOPC} & X & X & X & X & X & \multicolumn{5}{|c|}{RS} \\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{DIV}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 0 & 1 & \multicolumn{1}{|c}{X} & \multicolumn{5}{|c|}{RT} & X & X & X & X & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS} \\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{ERET}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 0 & 0 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & \multicolumn{1}{c|}{X} \\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{FENCE}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 0 & 1 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & \multicolumn{1}{c|}{X} \\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{LB}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 0 & 0 & 0 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{LH}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 0 & 0 & 1 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{LL}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 0 & 1 & 1 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{LW}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 0 & 1 & 0 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{MFC}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 1 & 0 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{CPRS} \\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{MFHI}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & \multicolumn{5}{|c|}{RD} & X & X & X & X & \multicolumn{1}{c|}{X}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{MOV}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline	
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{MTC}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & \multicolumn{5}{|c|}{CPRD} & \multicolumn{5}{c|}{RS} \\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{MTHI}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X& X & \multicolumn{5}{|c|}{RS} \\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{MVN}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline	
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{MULT}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 0 & 0 & \multicolumn{1}{|c}{X} & \multicolumn{5}{|c|}{RT} & X & X & X & X & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS} \\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{NOR}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{OR}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{RSB}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+
+\pagebreak
+\section{SB}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 1 & 0 & 0 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{SC}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 1 & 1 & 1 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{SH}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 1 & 0 & 1 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{SUB}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{SW}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 1 & 1 & 0 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{SXB}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline	
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{SXH}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline	
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{SYSCALL}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 0 & 1 & 0 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & \multicolumn{1}{c|}{X} \\
+	\hline
+\end{tabular}
+}
+
+\pagebreak
+\section{XOR}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+\end{document}
