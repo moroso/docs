@@ -66,8 +66,8 @@ OTHER_OPCODE[8:0] = {OP1[1:0], OP2[1:0], OPC_3[4:0]} =
 
             3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1
             1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
-mov short   PRED_ 0 CONSTANT_HIGH____________ R ALUOPCO RD_______ CONST_LOW 
-alu short   PRED_ 0 CONSTANT___________ ROTATE_ ALUOPCO RD_______ RS_______ 
+alu1 short  PRED_ 0 CONSTANT_LOW_______ ROTATE_ ALUOPCO RD_______ CONST_HI_ 
+alu2 short  PRED_ 0 CONSTANT___________ ROTATE_ ALUOPCO RD_______ RS_______ 
   (compare)                                     COMPARE CMPTP PN_
 alu reg     PRED_ 1 0 1 SHIFTAMT_ SHF RT_______ ALUOPCO RD_______ RS_______ 
   (compare)                                     COMPARE CMPTP PN_
@@ -75,7 +75,7 @@ loadstore   PRED_ 1 0 0 1 OFFSET_________________ LSUOP RD_______ RS_______
 branchimm   PRED_ 1 1 0 L OFFSET___________________________________________ 
 branchreg   PRED_ 1 1 1 L OFFSET_________________________________ RS_______ 
 other       PRED_ 1 0 0 0 1 OPC_1____ RT_______ OPC_2__ RD_______ RS_______ 
-shift reg   PRED_ 1 0 0 0 0 0 0 1 SHF RT_______ 0 1 1 1 RD_______ RS_______ 
+alu1 regsh  PRED_ 1 0 0 0 0 0 0 1 SHF RT_______ ALUOPCO RD_______ RS_______ 
 alu long    PRED_ 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ALUOPCO RD_______ RS_______ LONG
 
 mov short   : rd <- CONSTANT[17:0] ROR {R,4'b0}
