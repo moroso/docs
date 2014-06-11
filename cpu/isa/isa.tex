@@ -55,28 +55,38 @@ Virtual memory is accomplished through a hardware-filled TLB, with 4KB pages and
 \chapter{Instruction Listing}
 
 \pagebreak
-\section{ADD}
+\section{ADD - 32-bit Addition}
 
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!ADD[PN] Rd, Rs, #Imm!
+  \item \verb!ADD[PN] Rd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+ADD is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
 \subsection{Behavior}
-The first form adds the value \texttt{CONSTANT ROR 2*ROTATE} to \texttt{RS}, storing the result in \texttt{RD}.
-The second form shifts the value in \texttt{RT} in the manner specified by \texttt{SHF} and \texttt{SHIFTAMT}, then adds that to \texttt{RS} and stores the result in \texttt{RD}.
-The third form adds the long immediate stored in the next instruction slot to \texttt{RS} and stores the result in \texttt{RD}. A no-op is issued for the next instruction slot.
+Adds the two operands together into the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the addition is performed.
+
+TODO optional overflow exceptions???
 
 \pagebreak
 \section{AND}
@@ -84,15 +94,15 @@ The third form adds the long immediate stored in the next instruction slot to \t
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
@@ -153,15 +163,15 @@ The third form adds the long immediate stored in the next instruction slot to \t
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
@@ -324,17 +334,17 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline	
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
@@ -375,17 +385,17 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline	
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
@@ -411,15 +421,15 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
@@ -430,15 +440,15 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM \\
 	\hline
 \end{tabular}
 }
@@ -449,15 +459,15 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
@@ -514,15 +524,15 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
@@ -548,17 +558,17 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline	
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
@@ -569,17 +579,17 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline	
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
@@ -605,28 +615,17 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \subsection{Encoding}
 
 \texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
-
-
-
-
-
-
-
-
-
-
-
 
 \end{document}
