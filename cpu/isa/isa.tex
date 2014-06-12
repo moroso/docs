@@ -55,7 +55,7 @@ Virtual memory is accomplished through a hardware-filled TLB, with 4KB pages and
 \chapter{Instruction Listing}
 
 \pagebreak
-\section{ADD - 32-bit Addition}
+\section{ADD - Addition}
 
 \subsection{Encoding}
 
@@ -89,7 +89,7 @@ Adds the two operands together into the destination register. If two register op
 TODO optional overflow exceptions???
 
 \pagebreak
-\section{AND}
+\section{AND - Bitwise And}
 
 \subsection{Encoding}
 
@@ -107,9 +107,21 @@ TODO optional overflow exceptions???
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!AND[PN] Rd, Rs, #Imm!
+  \item \verb!AND[PN] Rd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+AND is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Computes the bitwise logical AND of the two operands, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
 
 \pagebreak
-\section{B}
+\section{B - Branch}
 
 \subsection{Encoding}
 
@@ -125,8 +137,22 @@ TODO optional overflow exceptions???
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!B[PN] <label>!
+  \item \verb!B[PN] (Rs + OFF)!
+\end{itemize}
+
+\subsection{Type}
+Branch is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+Transfers control to the address specified. The \texttt{OFFSET} field is shifted left by 4 places and sign-extended to 32 bits, then added to either the source register or, if none is specified, the address of the branch instruction. If the specified base register is not aligned to a 16-byte value, the target is rounded down to the nearest aligned value before control is transferred. Other instructions in the same packet as the branch instruction are executed before control is transferred.
+
+
 \pagebreak
-\section{BL}
+\section{BL - Branch with Link}
 
 \subsection{Encoding}
 
@@ -142,8 +168,21 @@ TODO optional overflow exceptions???
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!BL[PN] <label>!
+  \item \verb!BL[PN] (Rs + OFF)!
+\end{itemize}
+
+\subsection{Type}
+Branch with Link is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+BL functions identically to the Branch instruction, except that the address of the BL instruction is placed in R31.
+
 \pagebreak
-\section{BREAK}
+\section{BREAK - TODO XXX}
 
 \subsection{Encoding}
 
@@ -158,7 +197,7 @@ TODO optional overflow exceptions???
 }
 
 \pagebreak
-\section{CMP}
+\section{CMPBC - Compare Bits Clear}
 
 \subsection{Encoding}
 
@@ -167,19 +206,248 @@ TODO optional overflow exceptions???
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c|}{CMPTP} & \multicolumn{2}{c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
 	\hline
 \end{tabular}
 }
 
-TODO do we want one entry for all compares that lists the types, or an entry for each one?
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!CMPBC[PN] Pd, Rs, #Imm!
+  \item \verb!CMPBC[PN] Pd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+CMPBC is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPBC checks each bit of Rs corresponding to a 1 bit in the second operand, writing 1 into the destination predicate if all such bits are 0, and writing 0 otherwise -- that is, it computes the unary OR of the bits in \verb!(~Rs & OP2)! and stores the result in the desired predicate.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
-\section{CPOP}
+\section{CMPBS - Compare Bits Set}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!CMPBS[PN] Pd, Rs, #Imm!
+  \item \verb!CMPBS[PN] Pd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+CMPBS is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPBS checks each bit of Rs corresponding to a 1 bit in the second operand, writing 1 into the destination predicate if any such bit is 1, and writing 0 otherwise  -- that is, it computes the unary OR of the bits in \verb!(Rs & OP2)! and stores the result in the desired predicate.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+\pagebreak
+\section{CMPEQ - Compare Equal}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!CMPEQ[PN] Pd, Rs, #Imm!
+  \item \verb!CMPEQ[PN] Pd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+CMPEQ is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPEQ tests whether its two operands are equal, writing 1 into the destination predicate if they are and 0 otherwise.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+
+\pagebreak
+\section{CMPLES - Compare Less Than or Equal (Signed)}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!CMPLES[PN] Pd, Rs, #Imm!
+  \item \verb!CMPLES[PN] Pd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+CMPLES is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPLES interprets its operands as 32-bit two's-complement signed integers, and writes 1 into the specified predicate register if the value of \texttt{Rs} is less than or equal to the value of the second operand, and 0 otherwise.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+
+\pagebreak
+\section{CMPLEU - Compare Less Than or Equal (Unsigned)}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!CMPLEU[PN] Pd, Rs, #Imm!
+  \item \verb!CMPLEU[PN] Pd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+CMPLEU is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPLEU interprets its operands as 32-bit unsigned integers, and writes 1 into the specified predicate register if the value of \texttt{Rs} is less than or equal to the value of the second operand, and 0 otherwise.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+
+\pagebreak
+\section{CMPLTS - Compare Less Than (Signed)}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!CMPLTS[PN] Pd, Rs, #Imm!
+  \item \verb!CMPLTS[PN] Pd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+CMPLTS is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPLTS interprets its operands as 32-bit two's-complement signed integers, and writes 1 into the specified predicate register if the value of \texttt{Rs} is less than to the value of the second operand, and 0 otherwise.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+
+\pagebreak
+\section{CMPLTU - Compare Less Than (Unsigned)}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!CMPLTU[PN] Pd, Rs, #Imm!
+  \item \verb!CMPLTU[PN] Pd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+CMPLTU is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPLTU interprets its operands as 32-bit unsigned integers, and writes 1 into the specified predicate register if the value of \texttt{Rs} is less than to the value of the second operand, and 0 otherwise.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+
+\pagebreak
+\section{CPOP - TODO XXX}
 
 \subsection{Encoding}
 
@@ -194,7 +462,7 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 }
 
 \pagebreak
-\section{DIV}
+\section{DIV - Integer Division}
 
 \subsection{Encoding}
 
@@ -208,8 +476,23 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!DIV[PN] Rd, Rs, Rt!
+\end{itemize}
+
+\subsection{Type}
+
+DIV is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+
+Performs the integer division \texttt{Rs / Rt}, writing the quotient into \texttt{Rd} and the remainder into the multiply/divide overflow register.
+
+
 \pagebreak
-\section{ERET}
+\section{ERET - Return from Exception}
 
 \subsection{Encoding}
 
@@ -223,8 +506,22 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!ERET[PN]!
+\end{itemize}
+
+\subsection{Type}
+
+ERET is a Control operation. It may only be placed as the first instruction in a packet. It may only be used when the processor is in kernel mode.
+
+\subsection{Behavior}
+ERET returns the processor to user mode from kernel mode, and branches to the memory address contained in the Error PC control register. Other instructions in the same packet as the ERET instruction are executed in kernel mode before control is transferred. This instruction also clears the memory link bit. 
+
+
 \pagebreak
-\section{FENCE}
+\section{FENCE - TODO XXX}
 
 \subsection{Encoding}
 
@@ -239,7 +536,7 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 }
 
 \pagebreak
-\section{LB}
+\section{LB - Load Byte}
 
 \subsection{Encoding}
 
@@ -253,8 +550,21 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!LB[PN] Rd, (Rs [+ OFFSET])!
+\end{itemize}
+
+\subsection{Type}
+LB is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+LB loads a byte from the specified address into \texttt{Rd}. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. The high 24 bits of \texttt{Rd} are zeroed.
+
+
 \pagebreak
-\section{LH}
+\section{LH - Load Half-Word}
 
 \subsection{Encoding}
 
@@ -268,8 +578,21 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!LH[PN] Rd, (Rs [+ OFFSET])!
+\end{itemize}
+
+\subsection{Type}
+LH is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+LH loads two bytes from the specified address into \texttt{Rd}. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. Only 2-byte aligned addresses may be accessed - the low bit of the address is ignored. The high 16 bits of \texttt{Rd} are zeroed.
+
+
 \pagebreak
-\section{LL}
+\section{LL - Load Linked}
 
 \subsection{Encoding}
 
@@ -283,8 +606,24 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!LL[PN] Rd, (Rs [+ OFFSET])!
+\end{itemize}
+
+\subsection{Type}
+LL is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+LL loads a word from the specified address into \texttt{Rd}. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. Only 4-byte aligned addresses may be accessed - the low 2 bits of the address are ignored.
+
+\noindent
+Additionally, LL sets the link bit. A future SC operation will only complete if no interrupt, exception, or ERET clears the link bit in the intervening period.
+
+
 \pagebreak
-\section{LW}
+\section{LW - Load Word}
 
 \subsection{Encoding}
 
@@ -298,8 +637,21 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!LW[PN] Rd, (Rs [+ OFFSET])!
+\end{itemize}
+
+\subsection{Type}
+LW is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+LW loads a word from the specified address into \texttt{Rd}. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. Only 4-byte aligned addresses may be accessed - the low 2 bits of the address are ignored.
+
+
 \pagebreak
-\section{MFC}
+\section{MFC - Move From Coprocessor Register}
 
 \subsection{Encoding}
 
@@ -313,8 +665,21 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!MFC[PN] Rd, CPRs!
+\end{itemize}
+
+\subsection{Type}
+MFC is a Control operation. It may only be placed as the first instruction in a packet. It may only be used when the processor is in kernel mode.
+
+\subsection{Behavior}
+MFC moves the contents of the specfied coprocessor register into the specified general-purpose register. See TODO XXX Link for a description of the available coprocessor registers and their mnemonics.
+
+
 \pagebreak
-\section{MFHI}
+\section{MFHI - Move From Multiply/Division Overflow Register}
 
 \subsection{Encoding}
 
@@ -328,8 +693,20 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!MFHI[PN] Rd!
+\end{itemize}
+
+\subsection{Type}
+MFHI is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+MFHI moves the contents of the multiply/division overflow register into the specified general-purpose register. This register stores the high bits of results of multiplication operations, or the remainders generated by division operations.
+
 \pagebreak
-\section{MOV}
+\section{MOV - Move}
 
 \subsection{Encoding}
 
@@ -338,7 +715,7 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & & \\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW} &\\
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\cline{1-32}
@@ -349,8 +726,22 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!MOV[PN] Rd, #Imm!
+  \item \verb!MOV[PN] Rd, Rs [SHF #Imm]!
+  \item \verb!MOV[PN] Rd, Rs SHF Rt!
+\end{itemize}
+
+\subsection{Type}
+MOV is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+MOV moves the value of its source operand into the specified destination register. If the second operand is a register, it may be shifted by an immediate value or by the contents of a register before being stored.
+
 \pagebreak
-\section{MTC}
+\section{MTC - Move To Coprocessor Register}
 
 \subsection{Encoding}
 
@@ -364,8 +755,21 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!MTC[PN] CPRd, Rs!
+\end{itemize}
+
+\subsection{Type}
+MTC is a Control operation. It may only be placed as the first instruction in a packet. It may only be used when the processor is in kernel mode.
+
+\subsection{Behavior}
+MTC moves the contents of the selected general-purpose register into the specified coprocessor register. See TODO XXX Link for a description of the available coprocessor registers and their mnemonics.
+
+
 \pagebreak
-\section{MTHI}
+\section{MTHI - Move To Multiply/Division Overflow Register}
 
 \subsection{Encoding}
 
@@ -379,8 +783,20 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!MTHI[PN] Rs!
+\end{itemize}
+
+\subsection{Type}
+MTHI is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+MTHI moves the value of the specified general-purpose register into the multiply/division overflow register.
+
 \pagebreak
-\section{MVN}
+\section{MVN - Move and Invert}
 
 \subsection{Encoding}
 
@@ -389,7 +805,7 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW} &\\
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\cline{1-32}
@@ -400,8 +816,23 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!MVN[PN] Rd, #Imm!
+  \item \verb!MVN[PN] Rd, Rs [SHF #Imm]!
+  \item \verb!MVN[PN] Rd, Rs SHF Rt!
+\end{itemize}
+
+\subsection{Type}
+MVN is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+MVN inverts its source operand, storing the result in the specified destination register. If the second operand is a register, it may be shifted by an immediate value or by the contents of a register before being inverted and stored.
+
+
 \pagebreak
-\section{MULT}
+\section{MULT - Integer Multiplication}
 
 \subsection{Encoding}
 
@@ -410,13 +841,27 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 0 & 0 & \multicolumn{1}{|c}{X} & \multicolumn{5}{|c|}{RT} & X & X & X & X & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS} \\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 0 & 0 & \multicolumn{1}{|c}{S} & \multicolumn{5}{|c|}{RT} & X & X & X & X & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS} \\
 	\hline
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!MULT[PN] Rd, Rs, Rt!
+  \item \verb!MULTS[PN] Rd, Rs, Rt!
+\end{itemize}
+
+\subsection{Type}
+MULT is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+MULT performs an integer multiplication on its two register operands. If the S bit is set, the operands are interpreted as two's complement signed integers; otherwise they are interpreted as unsigned. The low 32 bits of the 64 bit result are placed in the specified destination register, and the high 32 bits are placed in the special-purpose multiply/division overflow register, where they are accessible via the MFHI instruction.
+
+
 \pagebreak
-\section{NOR}
+\section{NOR - Bitwise Logical NOR}
 
 \subsection{Encoding}
 
@@ -434,8 +879,22 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!NOR[PN] Rd, Rs, #Imm!
+  \item \verb!NOR[PN] Rd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+NOR is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Computes the bitwise logical NOR of the two operands, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
+
+
 \pagebreak
-\section{OR}
+\section{OR - Bitwise Logical OR}
 
 \subsection{Encoding}
 
@@ -453,8 +912,22 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!OR[PN] Rd, Rs, #Imm!
+  \item \verb!OR[PN] Rd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+OR is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Computes the bitwise logical OR of the two operands, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
+
+
 \pagebreak
-\section{RSB}
+\section{RSB - Reverse Subtraction}
 
 \subsection{Encoding}
 
@@ -472,9 +945,22 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!RSB[PN] Rd, Rs, #Imm!
+  \item \verb!RSB[PN] Rd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+RSB is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Subtracts the value stored in RS from the value of the second operand, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
+
 
 \pagebreak
-\section{SB}
+\section{SB - Store Byte}
 
 \subsection{Encoding}
 
@@ -483,13 +969,29 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 1 & 0 & 0 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{6}{|c|}{OFFSETHIGH} & \multicolumn{5}{c}{RT} & \multicolumn{1}{|c|}{M} & 1 & 0 & 0 & \multicolumn{5}{|c|}{OFFSETLOW} & \multicolumn{5}{c|}{RS}\\
 	\hline
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!SB[PN] Rt, (Rs [+ OFFSET])!
+\end{itemize}
+
+\subsection{Type}
+SB is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+SB stores the low byte of \texttt{Rt} at the provided address. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. 
+
+\noindent
+The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:19], inst[13], inst[9:5]}#.
+
+
 \pagebreak
-\section{SC}
+\section{SC - Store Conditional}
 
 \subsection{Encoding}
 
@@ -498,13 +1000,32 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 1 & 1 & 1 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{6}{|c|}{OFFSETHIGH} & \multicolumn{5}{c}{RT} & \multicolumn{1}{|c|}{M} & 1 & 1 & 1 & \multicolumn{5}{|c|}{OFFSETLOW} & \multicolumn{5}{c|}{RS}\\
 	\hline
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!SC[PN] Rt, (Rs [+ OFFSET])!
+\end{itemize}
+
+\subsection{Type}
+SC is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+SC stores the value in \texttt{Rt} at the provided address, if the processor's link bit is set. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. Only 4-byte aligned addresses may be accessed - the low 2 bits of the address are ignored.
+
+The link bit is set by executing the LL instruction, and is cleared by the SC or ERET instructions, or any time an exception or interrupt is dispatched. SC only completes if the link bit is set when it is executed - thus, if it completes, all instructions since the last LL instruction are known to have been executed atomically. The SC instruction writes a 1 into predicate register 0 if the store completes successfully, or a 0 if it fails.
+
+The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:19], inst[13], inst[9:5]}#.
+
+
+
+
 \pagebreak
-\section{SH}
+\section{SH - Store Half-Word}
 
 \subsection{Encoding}
 
@@ -513,13 +1034,29 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 1 & 0 & 1 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{6}{|c|}{OFFSETHIGH} & \multicolumn{5}{c}{RT} & \multicolumn{1}{|c|}{M} & 1 & 0 & 1 & \multicolumn{5}{|c|}{OFFSETLOW} & \multicolumn{5}{c|}{RS}\\
 	\hline
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!SH[PN] Rt, (Rs [+ OFFSET])!
+\end{itemize}
+
+\subsection{Type}
+SH is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+SH stores the low two bytes of \texttt{Rt} at the provided address. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. The address must be aligned to a multiple of 2; the low bit of the address is ignored.
+
+\noindent
+The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:19], inst[13], inst[9:5]}#.
+
+
 \pagebreak
-\section{SUB}
+\section{SUB - Subtraction}
 
 \subsection{Encoding}
 
@@ -537,8 +1074,22 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!SUB[PN] Rd, Rs, #Imm!
+  \item \verb!SUB[PN] Rd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+SUB is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Subtracts the value of the second operand from the value in \texttt{Rs}, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
+
+
 \pagebreak
-\section{SW}
+\section{SW - Store Word}
 
 \subsection{Encoding}
 
@@ -547,13 +1098,29 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 1 & 1 & 0 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{6}{|c|}{OFFSETHIGH} & \multicolumn{5}{c}{RT} & \multicolumn{1}{|c|}{M} & 1 & 1 & 0 & \multicolumn{5}{|c|}{OFFSETLOW} & \multicolumn{5}{c|}{RS}\\
 	\hline
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!SW[PN] Rt, (Rs [+ OFFSET])!
+\end{itemize}
+
+\subsection{Type}
+SW is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+SW stores the contents of \texttt{Rt} at the provided address. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. The address must be aligned to a multiple of 4; the low two bits of the address are ignored.
+
+\noindent
+The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:19], inst[13], inst[9:5]}#.
+
+
 \pagebreak
-\section{SXB}
+\section{SXB - Sign-Extend Byte}
 
 \subsection{Encoding}
 
@@ -562,7 +1129,7 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW} &\\
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\cline{1-32}
@@ -572,6 +1139,21 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 	\hline
 \end{tabular}
 }
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!SXB[PN] Rd, #Imm!
+  \item \verb!SXB[PN] Rd, Rs [SHF #Imm]!
+  \item \verb!SXB[PN] Rd, Rs SHF Rt!
+\end{itemize}
+
+\subsection{Type}
+SXB is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+SXB moves the low byte of its source operand into the specified destination register, sign-extending it across the rest of the register. If the second operand is a register, it may be shifted by an immediate value or by the contents of a register before being stored.
+
 
 \pagebreak
 \section{SXH}
@@ -583,7 +1165,7 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{13}{|c}{CONSTHIGH} & \multicolumn{1}{|c|}{R} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTLOW} &\\
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\cline{1-32}
@@ -594,8 +1176,23 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!SXH[PN] Rd, #Imm!
+  \item \verb!SXH[PN] Rd, Rs [SHF #Imm]!
+  \item \verb!SXH[PN] Rd, Rs SHF Rt!
+\end{itemize}
+
+\subsection{Type}
+SXH is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+SXH moves the low two bytes of its source operand into the specified destination register, sign-extending it across the rest of the register. If the second operand is a register, it may be shifted by an immediate value or by the contents of a register before being stored.
+
+
 \pagebreak
-\section{SYSCALL}
+\section{SYSCALL - TODO XXX}
 
 \subsection{Encoding}
 
@@ -610,7 +1207,7 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 }
 
 \pagebreak
-\section{XOR}
+\section{XOR - Bitwise Exclusive OR}
 
 \subsection{Encoding}
 
@@ -627,5 +1224,19 @@ TODO do we want one entry for all compares that lists the types, or an entry for
 	\hline
 \end{tabular}
 }
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!XOR[PN] Rd, Rs, #Imm!
+  \item \verb!XOR[PN] Rd, Rs, Rt [SHF #Imm]!
+\end{itemize}
+
+\subsection{Type}
+XOR is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Computes the bitwise logical XOR of the two operands, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
+
 
 \end{document}
