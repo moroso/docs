@@ -72,7 +72,7 @@ alu2 short  PRED_ 0 CONSTANT___________ ROTATE_ ALUOPCO RD_______ RS_______
 alu reg     PRED_ 1 0 1 SHIFTAMT_ SHF RT_______ ALUOPCO RD_______ RS_______ 
   (compare)                                     COMPARE CMPTP PN_
 load        PRED_ 1 0 0 1 OFFSET_________________ LSUOP RD_______ RS_______
-store       PRED_ 1 0 0 1 OFFSET_HI__ RT_______ O LSUOP OFFSET_LO RS_______
+store       PRED_ 1 0 0 1 OFFSET_HI__ RT_______ M LSUOP OFFSET_LO RS_______
 branchimm   PRED_ 1 1 0 L OFFSET___________________________________________ 
 branchreg   PRED_ 1 1 1 L OFFSET_________________________________ RS_______ 
 other       PRED_ 1 0 0 0 1 OPC_1____ RT_______ OPC_2__ RD_______ RS_______ 
@@ -85,7 +85,7 @@ compare shor: pn <- rs COMPARE (CONSTANT[9:0] ROR {ROTATE,1'b0})
 alu reg     : rd <- rs ALU (rt SHF SHIFTAMT)
 compare reg : pn <- rs COMPARE (rt SHF SHIFTAMT)
 load        : LSUOP rd, OFFSET[11:0](rs)
-store       : LSUOP rt, {OFFSET_HI[5:0], O, OFFSET_LO[4:0]}(rs)
+store       : LSUOP rt, {OFFSET_HI[5:0], M, OFFSET_LO[4:0]}(rs)
 branchimm   : rd <- pc + {{4{OFFSET[24]}, OFFSET[23:0], 4'b0000}
 branchreg   : rd <- rs + {OFFSET[19:0], 4'b0000}
 other       : other
