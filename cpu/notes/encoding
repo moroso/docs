@@ -49,20 +49,20 @@ L[0] =
   NOLINK : 1'b0 |
   LINK   : 1'b1
 
-OTHER_OPCODE[8:0] = {OP1[1:0], OP2[1:0], OPC_3[4:0]} =
-  RESV0   : 9'b00_00_00000
-  BREAK   : 9'b00_01_xxxxx
-  SYSCALL : 9'b00_10_xxxxx
-  FENCE   : 9'b00_11_xxxxx
-  ERET    : 9'b01_00_xxxxx
-  CPOP    : 9'b01_01_xxxxx
-  MFC     : 9'b01_10_xxxxx
-  MTC     : 9'b01_11_xxxxx
-  MULT    : 9'b10_00_xxxxx
-  DIV     : 9'b10_01_xxxxx
-  MFHI    : 9'b10_10_xxxxx
-  MTHI    : 9'b10_11_xxxxx
-  SIMD?   : 9'b11_xx_xxxxx
+OTHER_OPCODE[8:0] = {OPC_1[4:0], OPC_2[3:0]} =
+  RESV0   : 9'b00000_0000
+  BREAK   : 9'b0001x_xxxx
+  SYSCALL : 9'b0010x_xxxx
+  FENCE   : 9'b0011x_xxxx
+  ERET    : 9'b0100x_xxxx
+  CPOP    : 9'b0101x_xxxx
+  MFC     : 9'b0110x_xxxx
+  MTC     : 9'b0111x_xxxx
+  MULT    : 9'b1000S_xxxx
+  DIV     : 9'b1001x_xxxx
+  MFHI    : 9'b1010x_xxxx
+  MTHI    : 9'b1011x_xxxx
+  SIMD?   : 9'b11xxx_xxxx
 
             3 3 2 2 2 2 2 2 2 2 2 2 1 1 1 1 1 1 1 1 1 1
             1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
