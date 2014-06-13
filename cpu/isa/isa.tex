@@ -30,22 +30,25 @@
 \chapter{CPU Architecture}
 
 \section{Instructions}
-Each instruction is a 32-bit word, stored in little-endian order. The top 2 bits of the instruction select one of four predicate registers, and the third bit from the top optionally inverts it. The instruction is only executed if the resulting predicate is true.
+Each instruction is a 32-bit word, stored in little-endian order. The top 2 bits of the instruction select a predicate register, and the third bit from the top optionally inverts it. The instruction is only executed if the resulting predicate is true.
+
+
+
+\section{Registers}
+There are 32 32-bit general-purpose registers, R0 through R31. R31 is used as the link register for BL instructions. The program counter is stored separately, and may only be modified through branch instructions and read through BL instructions. 
+
+There are three one-bit predicate registers, P0 through P2, that may be written to by compare instructions. A fourth predicate register, P3, is always true. Instructions predicated on P3 will always execute, and writes to P3 are ignored.
+
+\section{ALU Instruction Formats}
+
+ALU instructions may accept immediate values for one of their input operands, which come in two forms:
 
 \section{VLIW}
 At each time step, the CPU fetches a ``packet'' of 4 instructions located contiguously in memory and executes them in parallel. These packets must be aligned to their 16-byte size, and branch targets must also be so aligned. 
 
 There are three types of instructions: Control, Memory, and ALU instructions. Only one control instruction may be executed in any given packet; it must occupy the first (lowest-address) slot in its packet. Likewise, only the first two slots in a packet may execute memory instructions. ALU instructions may be located in any slot.
 
-ALU instructions in the first three slots may optionally specify a ``long immediate'' operand. In this case, the 32 bits following that instruction are interpreted as an operand, and a no-op is scheduled in the following slot of that packet.
-
-\section{Registers}
-There are 32 32-bit general-purpose registers, R0 through R31. R31 is used as the link register for BL instructions. The program counter is stored separately, and may only be modified through branch instructions and read through BL instructions. 
-
-There are three one-bit predicate registers that may be written to by compare instructions and used to conditionally execute any instruction. 
-
-\section{Shifting}
-The ALU is preceded by a shifter for its second operand
+ALU instructions in the first three slots may optionally specify a ``long immediate'' operand. In this case, the 32 bits following that instruction are interpreted as an operand, and a no-op is scheduled in the following slot of that packet. An illegal instruction exception is thrown if the last slot in a packet specifies a long immediate operand.
 
 \section{Virtual Memory}
 Virtual memory is accomplished through a hardware-filled TLB, with 4KB pages and a 2-level page-table structure that looks like x86's without any of the fancy bits. (more detail to come in this section; in particular, we want to boot with paging on but it's not clear how the world looks then) 
@@ -1156,7 +1159,7 @@ SXB moves the low byte of its source operand into the specified destination regi
 
 
 \pagebreak
-\section{SXH}
+\section{SXH - Sign-Extend Half-Word}
 
 \subsection{Encoding}
 
