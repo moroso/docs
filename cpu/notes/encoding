@@ -89,6 +89,5 @@ store       : LSUOP rt, {OFFSET_HI[5:0], M, OFFSET_LO[4:0]}(rs)
 branchimm   : rd <- pc + {{4{OFFSET[24]}, OFFSET[23:0], 4'b0000}
 branchreg   : rd <- rs + {OFFSET[19:0], 4'b0000}
 other       : other
-shift short : rd <- rs SHF SHIFTAMT
-shift reg   : rd <- rs SHF rt
+alu1 regsh  : rd <- rs SHF rt
 alu long    : rd <- rs ALU LONG
