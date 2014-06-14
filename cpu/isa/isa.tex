@@ -41,17 +41,74 @@ There are three one-bit predicate registers, P0 through P2, that may be written 
 
 \section{ALU Instruction Formats}
 
-ALU instructions may accept immediate values for one of their input operands, which come in two forms:
+ALU instructions may accept immediate values for one of their input operands, which come in two forms: Short immediates are embedded in the instruction and consist of a 10-bit constant and a 4-bit rotate amount. To achieve any even rotation between 0 and 30, the rotate amount is first multiplied by 2, and the constant is rotated right by the result. ALU instructions that accept a single operand use the portion of the instruction normally used for the other operand register to extend the constant to 15 bits. Long immediate operands are 32 bit values, and occupy the memory word following the instruction.
+
+If a register is used as the last source operand of an ALU instruction, it may optionally be shifted by a 5-bit immediate value, as specified with the \texttt{SHF} and \texttt{SHIFTAMT} fields of the instruction. The \texttt{SHIFTAMT} field is the amount to shift, between 0 and 31, and the \texttt{SHF} field specifies the shift type, as follows:
+
+\begin{table}[!h]
+\centering
+\begin{tabular}{l|l|l}
+Encoding & Mnemonic & Shift Type\\
+\hline
+0 0 & \texttt{LSL} & Logical Shift Left \\ 
+0 1 & \texttt{LSR} & Logical Shift Right \\ 
+1 0 & \texttt{ASR} & Arithmetic Shift Right \\ 
+1 1 & \texttt{ROR} & Rotate Right
+\end{tabular}
+\end{table}
+
+ALU instructions taking a single operand may also specify a register shifted by an unsigned value contained in another register \texttt{Rt}. In this case, the same \texttt{SHF} types are available. If the value of the shift register is greater than 31, the following behavior is used: Logical shifts zero the result, arithmetic right shift extends the sign bit of the operand register across the entire result, and rotate rotates the value by \texttt{Rt \% 32}.
 
 \section{VLIW}
-At each time step, the CPU fetches a ``packet'' of 4 instructions located contiguously in memory and executes them in parallel. These packets must be aligned to their 16-byte size, and branch targets must also be so aligned. 
+At each time step, the CPU fetches a ``packet'' of 4 instructions located contiguously in memory and executes them in parallel. These packets must be aligned to their 16-byte size, and branch targets must also be so aligned.
 
 There are three types of instructions: Control, Memory, and ALU instructions. Only one control instruction may be executed in any given packet; it must occupy the first (lowest-address) slot in its packet. Likewise, only the first two slots in a packet may execute memory instructions. ALU instructions may be located in any slot.
 
-ALU instructions in the first three slots may optionally specify a ``long immediate'' operand. In this case, the 32 bits following that instruction are interpreted as an operand, and a no-op is scheduled in the following slot of that packet. An illegal instruction exception is thrown if the last slot in a packet specifies a long immediate operand.
+If a long immediate operand is specified for an ALU instruction, the following slot is interpreted as an operand and no operation is issued for that slot. The final slot in a packet may not specify a long immediate operand.
+
 
 \section{Virtual Memory}
-Virtual memory is accomplished through a hardware-filled TLB, with 4KB pages and a 2-level page-table structure that looks like x86's without any of the fancy bits. (more detail to come in this section; in particular, we want to boot with paging on but it's not clear how the world looks then) 
+Virtual memory is accomplished through a hardware-filled TLB, with 4KB pages and a 2-level page-table structure. Page directories and page tables are one page in size, containing 1024 32-bit entries. Virtual addresses are 32 bits and are broken up into 3 parts: Page Directory Index, Page Table Index, and Page Offset, as follows:
+
+\begin{table}[!h]
+\centering
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & & & & & & & & & 2 & 2 & & & & & & & & & 1 & 1 & & & & & & & & & & &\\
+	1 & & & & & & & & & 2 & 1 & & & & & & & & & 2 & 1 & & & & & & & & & & & 0\\
+	\hline
+	\multicolumn{10}{|c}{PD INDEX} & \multicolumn{10}{|c|}{PT INDEX} & \multicolumn{12}{c|}{OFFSET}\\
+	\hline
+\end{tabular}
+}
+\end{table}
+
+The page directory base is stored in a coprocessor register, \texttt{PTBR}. Writes to this register will flush all entries not marked global from the TLB.
+Page table entries and page directory entries are each 32 bits and have the same format:
+
+\begin{table}[!h]
+\centering
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & & 2 & 2 & & & & & & & & & & & & & & & & 1 & 1 & & & & & & & & & & &\\
+	1 & & 9 & 8 & & & & & & & & & & & & & & & & 2 & 1 & & & & & & & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c}{RSV} & \multicolumn{17}{|c|}{PHYSICAL PAGE BASE} & \multicolumn{8}{c|}{UNUSED} & G & \multicolumn{1}{|c|}{K} & W & \multicolumn{1}{|c|}{P}\\
+	\hline
+\end{tabular}
+}
+\end{table}
+
+The four flags in each entry have the following meanings:
+
+\begin{itemize}
+  \item \texttt{G}: Global page. Mappings with this bit set in either level will not be flushed from the TLB when the page table base register is modified.
+  \item \texttt{K}: Kernel-only page. Mappings with this bit set in either level may only be read or written to while the processor is in kernel mode. Attempting to access such mappings from user mode will generate a page fault exception.
+  \item \texttt{W}: Writeable page. Attempting to write to a page without this bit set in both levels will result in a page fault.
+  \item \texttt{P}: Present. Attempting to access a page without this bit set in both levels will result in a page fault.
+\end{itemize}
+
+Since our FPGA has 512MB of physical memory, physical page bases are 17 bits, and offsets are 12 bits. The top bits of an entry are not used but should remain 0 in case we go to 32-bit physical addresses in the future. Bits 11 through 4 are free for programmer use.
 
 \section{Exceptions}
 
