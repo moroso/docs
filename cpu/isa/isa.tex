@@ -449,20 +449,6 @@ CMPLTU interprets its operands as 32-bit unsigned integers, and writes 1 into th
 P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 
-\pagebreak
-\section{CPOP - TODO XXX}
-
-\subsection{Encoding}
-
-\texttt{%
-\begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
-	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
-	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 0 & 1 & \multicolumn{1}{|c|}{C} & X & X & X & X & X & \multicolumn{4}{|c|}{CPOPC} & X & X & X & X & X & \multicolumn{5}{|c|}{RS} \\
-	\hline
-\end{tabular}
-}
 
 \pagebreak
 \section{DIV - Integer Division}
@@ -524,7 +510,7 @@ ERET returns the processor to user mode from kernel mode, and branches to the me
 
 
 \pagebreak
-\section{FENCE - TODO XXX}
+\section{FENCE}
 
 \subsection{Encoding}
 
@@ -537,6 +523,63 @@ ERET returns the processor to user mode from kernel mode, and branches to the me
 	\hline
 \end{tabular}
 }
+
+\subsection{Syntax}
+\begin{itemize}
+  \item \verb!FENCE[PN]!
+\end{itemize}
+
+\subsection{Type}
+FENCE is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+Our architecture doesn't reorder requests, so right now FENCE is a no-op. If we have to add behavior to it in the future, memory instructions in the same packet as the FENCE will probably go after it, but please don't count on that right now.
+
+\pagebreak
+\section{FLUSH - Flush L1 Caches}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 0 & 1 & \multicolumn{1}{|c|}{C} & X & X & X & X & X & X & X & \multicolumn{2}{|c|}{TYPE} & X & X & X & X & X & \multicolumn{5}{|c|}{RS} \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb!FLUSH[PN] TYPE, Rs!
+\end{itemize}
+
+\subsection{Type}
+
+FLUSH is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+
+FLUSH invalidates the line in the specified L1 cache corresponding to the virtual address contained in \texttt{Rs}. For instruction or data cache flushes, attempting to flush a virtual address whose
+access would cause a page fault will also cause a page fault. If a dirty data cache line is flushed, the new value is immediately written out to the L2 cache, where it will be visible to DMA peripherals.
+
+\noindent
+Values for the \texttt{TYPE} field are as follows:
+
+\begin{table}[!h]
+\centering
+\begin{tabular}{l|l|l}
+  Value & Mnemonic & Type\\
+  \hline
+  0 0 & \texttt{DATA} & L1 Data Cache\\
+  0 1 & \texttt{INST} & L1 Instruction Cache\\
+  1 0 & \texttt{DTLB} & Data TLB\\
+  1 1 & \texttt{ITLB} & Instruction TLB
+\end{tabular}
+\end{table}
+
 
 \pagebreak
 \section{LB - Load Byte}
