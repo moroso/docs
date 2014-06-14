@@ -13,6 +13,7 @@
     linkcolor=black,
     urlcolor=black
 }
+\usepackage{tabularx}
 \setlength{\headheight}{15.2pt}
 \pagestyle{fancy}
 \title{OSOROM Instruction Set Reference}
@@ -109,6 +110,29 @@ The four flags in each entry have the following meanings:
 \end{itemize}
 
 Since our FPGA has 512MB of physical memory, physical page bases are 17 bits, and offsets are 12 bits. The top bits of an entry are not used but should remain 0 in case we go to 32-bit physical addresses in the future. Bits 11 through 4 are free for programmer use.
+
+\section{Coprocessor Registers}
+
+The coprocessor registers are control registers accessible only in kernel mode via the MFC and MTC instructions. They provide information about exceptions to the kernel and are used to configure the processor. The following coprocessor registers are present:
+
+\begin{table}[!h]
+\centering
+\begin{tabularx}{\textwidth}{l|l|X}
+Encoding & Mnemonic & Purpose\\
+\hline
+\texttt{00000} & PFLAGS & Processor control flags. Currently only one: Bit 0 is 1 for paging enabled, 0 for paging disabled.\\
+\texttt{00001} & PTB & Page Table Base Register. Specifies the start of the page directory for virtual address translation. Writes to this register flush the TLB.\\
+\texttt{00010} & EHA & Exception Handler Address. Specifies a virtual address to which to transfer control when an exception or interrupt is encountered.\\
+\texttt{00011} & EPC & Error PC. The virtual address of the last instruction packet to cause an exception, or the first instruction not executed due to an interrupt.\\
+\texttt{00100} & EC0 & Error Cause 0. The cause of an exception occurring on lane 0, or the type of a received interrupt. See Section 1.7 for a list of causes.\\
+\texttt{00101} & EC1 & Error Cause 1. The cause of an exception occurring on lane 1.\\
+\texttt{00110} & EC2 & Error Cause 2. The cause of an exception occurring on lane 2.\\
+\texttt{00111} & EC3 & Error Cause 3. The cause of an exception occurring on lane 3.\\
+\texttt{01000} & EA0 & Error Address 0. If lane 0 makes an invalid memory access, the virtual address it attempted to access will be stored in this register.\\
+\texttt{01001} & EA1 & Error Address 1. If lane 1 makes an invalid memory access, the virtual address it attempted to access will be stored in this register.
+\end{tabularx}
+\end{table}
+
 
 \section{Exceptions}
 
