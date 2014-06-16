@@ -1,1 +1,5 @@
 *~
+cpu/isa/isa.aux
+cpu/isa/isa.log
+cpu/isa/isa.out
+cpu/isa/isa.toc
