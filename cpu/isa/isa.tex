@@ -113,19 +113,22 @@ The four flags in each entry have the following meanings:
 Since our FPGA has 512MB of physical memory, physical page bases are 17 bits, and offsets are 12 bits. The top bits of an entry are not used but should remain 0 in case we go to 32-bit physical addresses in the future. Bits 11 through 4 are free for programmer use.
 
 \section{Coprocessor Registers}
+\label{sec:cpregs}
 
-The coprocessor registers are control registers accessible only in kernel mode via the MFC and MTC instructions. They provide information about exceptions to the kernel and are used to configure the processor. The following coprocessor registers are present:
+The coprocessor registers are control registers accessible only in kernel mode via the MFC and MTC instructions. They provide information about exceptions to the kernel and are used to configure the processor. 
+
+\subsection{List of Coprocessor Registers}
 
 \begin{table}[!h]
 \centering
 \begin{tabularx}{\textwidth}{l|l|X}
 Encoding & Mnemonic & Purpose\\
 \hline
-\texttt{00000} & PFLAGS & Processor control flags. Currently only one: Bit 0 is 1 for paging enabled, 0 for paging disabled.\\
+\texttt{00000} & PFLAGS & Processor control flags. See below.\\
 \texttt{00001} & PTB & Page Table Base Register. Specifies the start of the page directory for virtual address translation. Writes to this register flush the TLB.\\
 \texttt{00010} & EHA & Exception Handler Address. Specifies a virtual address to which to transfer control when an exception or interrupt is encountered.\\
 \texttt{00011} & EPC & Error PC. The virtual address of the last instruction packet to cause an exception, or the first instruction not executed due to an interrupt.\\
-\texttt{00100} & EC0 & Error Cause 0. The cause of an exception occurring on lane 0, or the type of a received interrupt. See Section 1.7 for a list of causes.\\
+\texttt{00100} & EC0 & Error Cause 0. The cause of an exception occurring on lane 0, or the type of a received interrupt. See Section~\ref{sec:exns} for a list of causes.\\
 \texttt{00101} & EC1 & Error Cause 1. The cause of an exception occurring on lane 1.\\
 \texttt{00110} & EC2 & Error Cause 2. The cause of an exception occurring on lane 2.\\
 \texttt{00111} & EC3 & Error Cause 3. The cause of an exception occurring on lane 3.\\
@@ -134,8 +137,69 @@ Encoding & Mnemonic & Purpose\\
 \end{tabularx}
 \end{table}
 
+\subsection{The PFLAGS Register}
 
-\section{Exceptions}
+At present, the PFLAGS register contains 2 flags: Bit 0 is 1 if interrupts are enabled, and bit 1 is 1 if paging is enabled. More control flags may be added here if needed.
+
+
+\section{Exceptions and Interrupts}
+\label{sec:exns}
+
+Exceptions and interrupts cause the processor to enter kernel mode and transfer control to the virtual address specified in the EHA register. 
+If an interrupt occurs, the code corresponding to that interrupt will be written into the EC0 register. If one or more instructions in a packet cause exceptions, a code corresponding to the exception type will be written into the EC register corresponding to that instruction's location in the packet. If an instruction on lane 0 or 1 attempts to access an invalid memory address, the address will be written into the EA register for that lane. In all cases, the virtual address of the program counter where the exception occurred is written into the EPC register. For exceptions, this is the address of the instruction packet that caused the exception. For interrupts, this is the address of the first instruction packet not executed due to the interrupt. In all cases, interrupts are disabled. This is necessary in order to ensure the kernel can save the coprocessor registers before they are overwritten by another interrupt.
+
+\subsection{Error Code Format}
+
+\begin{table}[!h]
+\centering
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & & & & & & & & & & & & & & & & & & & & & & & & & & & & & & &\\
+	1 & & & & & & & & & & & & & & & & & & & & & & & 8 & 7 & 6 & 5 & & & & 1 & 0\\
+	\hline
+	\multicolumn{24}{|c|}{RESERVED} & \multicolumn{2}{c}{INT} & \multicolumn{5}{|c|}{EXNTYPE} & \multicolumn{1}{c|}{M}\\
+	\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{itemize}
+  \item \texttt{M} is 1 if the processor was in kernel mode when the exception or interrupt occurred, or 0 otherwise.
+  \item \texttt{EXNTYPE} corresponds to a value in Table~\ref{tab:exncodes} and indicates the type of exception that occurred.
+  \item If \texttt{EXNTYPE} indicates that an interrupt occurred, \texttt{INT} will correspond to a value in Table~\ref{tab:intcodes} and signify the type of interrupt.
+\end{itemize}
+
+\begin{table}[!h]
+\begin{tabular}{l|l}
+Error Code & Type\\
+\hline
+\texttt{00000} & No Error\\
+\texttt{00001} & Page Fault on Instruction Fetch\\
+\texttt{00010} & Illegal Instruction\\
+\texttt{00011} & Duplicate Destination\\
+\texttt{00100} & Page Fault on Data Access\\
+\texttt{00101} & Invalid Physical Address\\
+\texttt{00110} & Divide by Zero (TODO are we doing other arithmetic exceptions??)\\
+\texttt{00111} & Interrupt\\
+\texttt{01000} & SYSCALL\\
+\texttt{01001} & BREAK
+\end{tabular}
+\caption{Exception Codes}
+\label{tab:exncodes}
+\end{table}
+
+\begin{table}[!h]
+\begin{tabular}{l|l}
+Interrupt Code & Type\\
+\hline
+\texttt{00} & Timer\\
+\texttt{01} & USB\\
+\texttt{10} & Framebuffer\\
+\texttt{11} & SD Card
+\end{tabular}
+\caption{Interrupt Codes}
+\label{tab:intcodes}
+\end{table}
 
 
 
@@ -198,7 +262,7 @@ Encoding & Mnemonic & Purpose\\
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -232,7 +296,7 @@ TODO optional overflow exceptions???
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -340,7 +404,7 @@ BL functions identically to the Branch instruction, except that the address of t
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -375,7 +439,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -410,7 +474,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -446,7 +510,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -482,7 +546,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -518,7 +582,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -554,7 +618,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -848,7 +912,7 @@ LW loads a word from the specified address into \texttt{Rd}. The address is comp
 MFC is a Control operation. It may only be placed as the first instruction in a packet. It may only be used when the processor is in kernel mode.
 
 \subsection{Behavior}
-MFC moves the contents of the specfied coprocessor register into the specified general-purpose register. See TODO XXX Link for a description of the available coprocessor registers and their mnemonics.
+MFC moves the contents of the specfied coprocessor register into the specified general-purpose register. See Section~\ref{sec:cpregs}for a description of the available coprocessor registers and their mnemonics.
 
 
 \pagebreak
@@ -894,7 +958,7 @@ MFHI moves the contents of the multiply/division overflow register into the spec
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -938,7 +1002,7 @@ MOV moves the value of its source operand into the specified destination registe
 MTC is a Control operation. It may only be placed as the first instruction in a packet. It may only be used when the processor is in kernel mode.
 
 \subsection{Behavior}
-MTC moves the contents of the selected general-purpose register into the specified coprocessor register. See TODO XXX Link for a description of the available coprocessor registers and their mnemonics.
+MTC moves the contents of the selected general-purpose register into the specified coprocessor register. See Section~\ref{sec:cpregs} for a description of the available coprocessor registers and their mnemonics.
 
 
 \pagebreak
@@ -984,7 +1048,7 @@ MTHI moves the value of the specified general-purpose register into the multiply
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -1047,7 +1111,7 @@ MULT performs an integer multiplication on its two register operands. If the S b
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -1080,7 +1144,7 @@ Computes the bitwise logical NOR of the two operands, storing the result in the 
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM \\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG \\
 	\hline
 \end{tabular}
 }
@@ -1113,7 +1177,7 @@ Computes the bitwise logical OR of the two operands, storing the result in the d
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -1242,7 +1306,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -1308,7 +1372,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -1344,7 +1408,7 @@ SXB moves the low byte of its source operand into the specified destination regi
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -1393,7 +1457,7 @@ SXH moves the low two bytes of its source operand into the specified destination
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LIM\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
 	\hline
 \end{tabular}
 }
