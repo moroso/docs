@@ -954,7 +954,7 @@ MFHI moves the contents of the multiply/division overflow register into the spec
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
@@ -967,8 +967,8 @@ MFHI moves the contents of the multiply/division overflow register into the spec
 
 \begin{itemize}
   \item \verb!MOV[PN] Rd, #Imm!
-  \item \verb!MOV[PN] Rd, Rs [SHF #Imm]!
-  \item \verb!MOV[PN] Rd, Rs SHF Rt!
+  \item \verb!MOV[PN] Rd, Rt [SHF #Imm]!
+  \item \verb!MOV[PN] Rd, Rt SHF Rs!
 \end{itemize}
 
 \subsection{Type}
@@ -1044,7 +1044,7 @@ MTHI moves the value of the specified general-purpose register into the multiply
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
@@ -1057,8 +1057,8 @@ MTHI moves the value of the specified general-purpose register into the multiply
 
 \begin{itemize}
   \item \verb!MVN[PN] Rd, #Imm!
-  \item \verb!MVN[PN] Rd, Rs [SHF #Imm]!
-  \item \verb!MVN[PN] Rd, Rs SHF Rt!
+  \item \verb!MVN[PN] Rd, Rt [SHF #Imm]!
+  \item \verb!MVN[PN] Rd, Rt SHF Rs!
 \end{itemize}
 
 \subsection{Type}
@@ -1368,7 +1368,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
@@ -1381,8 +1381,8 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 
 \begin{itemize}
   \item \verb!SXB[PN] Rd, #Imm!
-  \item \verb!SXB[PN] Rd, Rs [SHF #Imm]!
-  \item \verb!SXB[PN] Rd, Rs SHF Rt!
+  \item \verb!SXB[PN] Rd, Rt [SHF #Imm]!
+  \item \verb!SXB[PN] Rd, Rt SHF Rs!
 \end{itemize}
 
 \subsection{Type}
@@ -1404,7 +1404,7 @@ SXB moves the low byte of its source operand into the specified destination regi
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & X & X & X & X &\multicolumn{1}{c|}{X} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
 	\hline
@@ -1417,8 +1417,8 @@ SXB moves the low byte of its source operand into the specified destination regi
 
 \begin{itemize}
   \item \verb!SXH[PN] Rd, #Imm!
-  \item \verb!SXH[PN] Rd, Rs [SHF #Imm]!
-  \item \verb!SXH[PN] Rd, Rs SHF Rt!
+  \item \verb!SXH[PN] Rd, Rt [SHF #Imm]!
+  \item \verb!SXH[PN] Rd, Rt SHF Rs!
 \end{itemize}
 
 \subsection{Type}
