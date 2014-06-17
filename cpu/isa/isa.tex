@@ -410,7 +410,7 @@ Branch with Link is a Control operation. It may only be placed as the first inst
 BL functions identically to the Branch instruction, except that the address of the BL instruction is placed in R31.
 
 \pagebreak
-\section{BREAK - TODO XXX}
+\section{BREAK}
 
 \subsection{Encoding}
 
@@ -423,6 +423,15 @@ BL functions identically to the Branch instruction, except that the address of t
 	\hline
 \end{tabular}
 }
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \texttt{BREAK - Debug Breakpoint}
+\end{itemize}
+
+\subsection{Behavior}
+Equivalent to SYSCALL, except that the exception code stored in EC0 is different - See Section~\ref{sec:exns}.
 
 \pagebreak
 \section{CMPBC - Compare Bits Clear}
@@ -1463,7 +1472,7 @@ SXH moves the low two bytes of its source operand into the specified destination
 
 
 \pagebreak
-\section{SYSCALL - TODO XXX}
+\section{SYSCALL - System Call Exception}
 
 \subsection{Encoding}
 
@@ -1476,6 +1485,17 @@ SXH moves the low two bytes of its source operand into the specified destination
 	\hline
 \end{tabular}
 }
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \texttt{SYSCALL}
+\end{itemize}
+
+\subsection{Behavior}
+
+SYSCALL causes an exception to occur on the instruction packet of which it is a part. Its corresponding error code is placed in the EC0 coprocessor register - see Section~\ref{sec:exns} for details.
+Note that this causes other instructions in the packet to be canceled.
 
 \pagebreak
 \section{XOR - Bitwise Exclusive OR}
