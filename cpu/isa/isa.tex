@@ -127,13 +127,17 @@ Encoding & Mnemonic & Purpose\\
 \texttt{00000} & PFLAGS & Processor control flags. See below.\\
 \texttt{00001} & PTB & Page Table Base Register. Specifies the start of the page directory for virtual address translation. Writes to this register flush the TLB.\\
 \texttt{00010} & EHA & Exception Handler Address. Specifies a virtual address to which to transfer control when an exception or interrupt is encountered.\\
-\texttt{00011} & EPC & Error PC. The virtual address of the last instruction packet to cause an exception, or the first instruction not executed due to an interrupt.\\
+\texttt{00011} & EPC & Error PC. The virtual address of the last instruction packet to cause an exception, or the first instruction not executed due to an interrupt.  LSBs contain system state when the exception occurred. \\
 \texttt{00100} & EC0 & Error Cause 0. The cause of an exception occurring on lane 0, or the type of a received interrupt. See Section~\ref{sec:exns} for a list of causes.\\
 \texttt{00101} & EC1 & Error Cause 1. The cause of an exception occurring on lane 1.\\
 \texttt{00110} & EC2 & Error Cause 2. The cause of an exception occurring on lane 2.\\
 \texttt{00111} & EC3 & Error Cause 3. The cause of an exception occurring on lane 3.\\
 \texttt{01000} & EA0 & Error Address 0. If lane 0 makes an invalid memory access, the virtual address it attempted to access will be stored in this register.\\
-\texttt{01001} & EA1 & Error Address 1. If lane 1 makes an invalid memory access, the virtual address it attempted to access will be stored in this register.
+\texttt{01001} & EA1 & Error Address 1. If lane 1 makes an invalid memory access, the virtual address it attempted to access will be stored in this register.\\
+\texttt{10000} & SP0 & Scratchpad register for system software usage.\\
+\texttt{10001} & SP1 & Scratchpad register for system software usage.\\
+\texttt{10010} & SP2 & Scratchpad register for system software usage.\\
+\texttt{10011} & SP3 & Scratchpad register for system software usage.
 \end{tabularx}
 \end{table}
 
@@ -141,6 +145,37 @@ Encoding & Mnemonic & Purpose\\
 
 At present, the PFLAGS register contains 2 flags: Bit 0 is 1 if interrupts are enabled, and bit 1 is 1 if paging is enabled. More control flags may be added here if needed.
 
+\subsection{The EPC Register}
+
+\begin{table}[!h]
+\centering
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & & & & & & & & & & & & & & & & & & & & & & & & & & & & & & &\\
+	1 & & & & & & & & & & & & & & & & & & & & & & & & & & & 4 & & & 1 & 0\\
+	\hline
+	\multicolumn{28}{|c|}{PC} & \multicolumn{2}{c}{RESV} & \multicolumn{1}{|c|}{IF} & \multicolumn{1}{c|}{M}\\
+	\hline
+\end{tabular}
+}
+\end{table}
+
+The \texttt{EPC} register's MSBs contain the PC at which an exception
+occurred.  (If an instruction fetch failed because of a paging exception,
+\texttt{EPC[PC]} contains the PC for which the fetch attempt failed.) The
+\texttt{M} field contains the system mode at the time that the exception
+occurred: if \texttt{EPC[M]} is set, then the system was in kernel mode at
+the time, and otherwise, the system was in user mode.  The \texttt{EPC[IF]}
+field contains the interrupt flag from \texttt{PFLAGS} at the time; if it is
+set, then interrupts were enabled, and if it is clear, than interrupts were
+disabled.
+
+\subsection{Scratchpad registers}
+
+Scratchpad registers are provided for the convenience of system software,
+should it wish to save and restore user registers (or other data) without
+reserving user-architectural registers for that purpose.  Their value is
+defined not to affect system state other than through reads and writes.
 
 \section{Exceptions and Interrupts}
 \label{sec:exns}
@@ -155,16 +190,15 @@ If an interrupt occurs, the code corresponding to that interrupt will be written
 \texttt{%
 \begin{tabular}{cccccccccccccccccccccccccccccccc}
 	3 & & & & & & & & & & & & & & & & & & & & & & & & & & & & & & &\\
-	1 & & & & & & & & & & & & & & & & & & & & & & & 8 & 7 & 6 & 5 & & & & 1 & 0\\
+	1 & & & & & & & & & & & & & & & & & & & & & & & & 7 & 6 & 5 & 4 & & & & 0\\
 	\hline
-	\multicolumn{24}{|c|}{RESERVED} & \multicolumn{2}{c}{INT} & \multicolumn{5}{|c|}{EXNTYPE} & \multicolumn{1}{c|}{M}\\
+	\multicolumn{25}{|c|}{RESERVED} & \multicolumn{2}{c}{INT} & \multicolumn{5}{|c|}{EXNTYPE} \\
 	\hline
 \end{tabular}
 }
 \end{table}
 
 \begin{itemize}
-  \item \texttt{M} is 1 if the processor was in kernel mode when the exception or interrupt occurred, or 0 otherwise.
   \item \texttt{EXNTYPE} corresponds to a value in Table~\ref{tab:exncodes} and indicates the type of exception that occurred.
   \item If \texttt{EXNTYPE} indicates that an interrupt occurred, \texttt{INT} will correspond to a value in Table~\ref{tab:intcodes} and signify the type of interrupt.
 \end{itemize}
@@ -697,7 +731,7 @@ Performs the integer division \texttt{Rs / Rt}, writing the quotient into \textt
 ERET is a Control operation. It may only be placed as the first instruction in a packet. It may only be used when the processor is in kernel mode.
 
 \subsection{Behavior}
-ERET returns the processor to user mode from kernel mode, and branches to the memory address contained in the Error PC control register. Other instructions in the same packet as the ERET instruction are executed in kernel mode before control is transferred. This instruction also clears the memory link bit. 
+ERET returns the processor to the state specified by the \texttt{EPC} coprocessor register.  Specifically, the program counter takes on the value from \texttt{EPC[PC]}, the system mode flag takes on the value from \texttt{EPC[M]} (kernel mode if \texttt{M} is 1, otherwise user mode), and the interrupt enable flag takes on the value from \texttt{EPC[IF]} (interrupts enabled if \texttt{IF} is 1, otherwise disabled).  Other instructions in the same packet as the ERET instruction are executed in kernel mode before control is transferred.  This instruction also clears the memory link bit. 
 
 
 \pagebreak
