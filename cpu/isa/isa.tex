@@ -244,7 +244,7 @@ Interrupt Code & Type\\
 
 \begin{table}[!h]
 \centering
-\scalebox{0.7}{\renewcommand{\tabcolsep}{0.15cm}\renewcommand{\arraystretch}{2}\begin{tabular}{rccccccccccccccccccccccccccccccccl}
+\scalebox{0.65}{\renewcommand{\tabcolsep}{0.175cm}\renewcommand{\arraystretch}{2.15}\begin{tabular}{rccccccccccccccccccccccccccccccccl}
 	& 31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 & 15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & \\
 	\cline{2-33}
 	ALU 1-Op Short \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 0 & \multicolumn{10}{|c}{Immediate Low 10} & \multicolumn{4}{|c|}{Rotate} & \multicolumn{4}{c}{ALU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Imm High 5} & \\
@@ -261,9 +261,9 @@ Interrupt Code & Type\\
 	\cline{2-33}
 	Store \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 0 & 1 & \multicolumn{6}{|c}{Offset High 6} & \multicolumn{5}{|c|}{Rt} & M & \multicolumn{3}{|c}{LSU Opcode} & \multicolumn{5}{|c}{Offset Low 5} & \multicolumn{5}{|c|}{Rs} & \\
 	\cline{2-33}
-	Branch immediate \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 1 & 0 & L & \multicolumn{25}{|c|}{Offset 25} & \\
+	Branch immediate \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 1 & 0 & \multicolumn{1}{|c}{L} & \multicolumn{25}{|c|}{Offset 25} & \\
 	\cline{2-33}
-	Branch register \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 1 & 1 & L & \multicolumn{20}{|c}{Offset 20} & \multicolumn{5}{|c|}{Rs} & \\
+	Branch register \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 1 & 1 & \multicolumn{1}{|c}{L} & \multicolumn{20}{|c}{Offset 20} & \multicolumn{5}{|c|}{Rs} & \\
 	\cline{2-33}
 	Control \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{Ctrl Opcode High} & \multicolumn{5}{|c}{Rt} & \multicolumn{4}{|c}{Ctrl Opcode Low} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Rs} & \\
 	\cline{2-33}
