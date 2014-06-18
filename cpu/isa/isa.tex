@@ -244,7 +244,10 @@ Interrupt Code & Type\\
 
 \begin{table}[!h]
 \centering
-\scalebox{0.65}{\renewcommand{\tabcolsep}{0.175cm}\renewcommand{\arraystretch}{2.15}\begin{tabular}{rccccccccccccccccccccccccccccccccl}
+\scalebox{0.65}{
+\renewcommand{\tabcolsep}{0.175cm}
+\renewcommand{\arraystretch}{2.15}
+\begin{tabular}{rccccccccccccccccccccccccccccccccl}
 	& 31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 & 15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & \\
 	\cline{2-33}
 	ALU 1-Op Short \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 0 & \multicolumn{10}{|c}{Immediate Low 10} & \multicolumn{4}{|c|}{Rotate} & \multicolumn{4}{c}{ALU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Imm High 5} & \\
@@ -275,7 +278,34 @@ Interrupt Code & Type\\
 \end{tabular}}
 \end{table}
 
+\pagebreak
+\section{ALU Opcodes}
 
+\begin{table}[!h]
+\centering
+\renewcommand{\arraystretch}{1.125}
+\begin{tabular}{|l|l|l|l|l|}
+	\hline
+	Encoding & Mnemonic & Operation & Action & Section \\
+	\hline
+	0 0 0 0 & \texttt{ADD}     & Addition              & Rd := todo  & ~\ref{sec:addinst} \\
+	0 0 0 1 & \texttt{AND}     & Bitwise And           & Rd := todo  & ~\ref{sec:andinst} \\
+	0 0 1 0 & \texttt{NOR}     & Bitwise Logical NOR   & Rd := todo  & ~\ref{sec:norinst} \\
+	0 0 1 1 & \texttt{OR}      & Bitwise Logical OR    & Rd := todo  & ~\ref{sec:orinst} \\
+	0 1 0 0 & \texttt{SUB}     & Subtraction           & Rd := todo  & ~\ref{sec:subinst} \\
+	0 1 0 1 & \texttt{RSB}     & Reverse Subtraction   & Rd := todo  & ~\ref{sec:rsbinst} \\
+	0 1 1 0 & \texttt{XOR}     & Bitwise Exclusive OR  & Rd := todo  & ~\ref{sec:xorinst} \\
+	0 1 1 1 & \texttt{COMPARE} & Compare Instructions  & Rd := todo  & ~\ref{sec:cmpbcinst}, ~\ref{sec:cmpbsinst}, ~\ref{sec:cmpeqinst}, ~\ref{sec:cmplesinst}, ~\ref{sec:cmpleuinst}, ~\ref{sec:cmpltsinst}, ~\ref{sec:cmpltuinst} \\
+	1 0 0 0 & \texttt{MOV}     & Move                  & Rd := todo  & ~\ref{sec:movinst} \\
+	1 0 0 1 & \texttt{MVN}     & Move and Invert       & Rd := todo  & ~\ref{sec:mvninst} \\
+	1 0 1 0 & \texttt{SXB}     & Sign-Extend Byte      & Rd := todo  & ~\ref{sec:sxbinst} \\
+	1 0 1 1 & \texttt{SXH}     & Sign-Extend Half-Word & Rd := todo  & ~\ref{sec:sxhinst} \\
+	1 1 0 0 & reserved         & n/a                   & n/a & n/a \\
+	1 1 0 1 & reserved         & n/a                   & n/a & n/a \\
+	1 1 1 0 & reserved         & n/a                   & n/a & n/a \\
+	1 1 1 1 & reserved         & n/a                   & n/a & n/a \\
+\end{tabular}
+\end{table}
 
 
 
@@ -284,6 +314,7 @@ Interrupt Code & Type\\
 
 \pagebreak
 \section{ADD - Addition}
+\label{sec:addinst}
 
 \subsection{Encoding}
 
@@ -318,6 +349,7 @@ TODO optional overflow exceptions???
 
 \pagebreak
 \section{AND - Bitwise And}
+\label{sec:andinst}
 
 \subsection{Encoding}
 
@@ -350,6 +382,7 @@ Computes the bitwise logical AND of the two operands, storing the result in the 
 
 \pagebreak
 \section{B - Branch}
+\label{sec:binst}
 
 \subsection{Encoding}
 
@@ -381,6 +414,7 @@ Transfers control to the address specified. The \texttt{OFFSET} field is shifted
 
 \pagebreak
 \section{BL - Branch with Link}
+\label{sec:blinst}
 
 \subsection{Encoding}
 
@@ -411,6 +445,7 @@ BL functions identically to the Branch instruction, except that the address of t
 
 \pagebreak
 \section{BREAK}
+\label{sec:breakinst}
 
 \subsection{Encoding}
 
@@ -435,6 +470,7 @@ Equivalent to SYSCALL, except that the exception code stored in EC0 is different
 
 \pagebreak
 \section{CMPBC - Compare Bits Clear}
+\label{sec:cmpbcinst}
 
 \subsection{Encoding}
 
@@ -470,6 +506,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPBS - Compare Bits Set}
+\label{sec:cmpbsinst}
 
 \subsection{Encoding}
 
@@ -505,6 +542,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPEQ - Compare Equal}
+\label{sec:cmpeqinst}
 
 \subsection{Encoding}
 
@@ -541,6 +579,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPLES - Compare Less Than or Equal (Signed)}
+\label{sec:cmplesinst}
 
 \subsection{Encoding}
 
@@ -577,6 +616,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPLEU - Compare Less Than or Equal (Unsigned)}
+\label{sec:cmpleuinst}
 
 \subsection{Encoding}
 
@@ -613,6 +653,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPLTS - Compare Less Than (Signed)}
+\label{sec:cmpltsinst}
 
 \subsection{Encoding}
 
@@ -649,6 +690,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPLTU - Compare Less Than (Unsigned)}
+\label{sec:cmpltuinst}
 
 \subsection{Encoding}
 
@@ -686,6 +728,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{DIV - Integer Division}
+\label{sec:divinst}
 
 \subsection{Encoding}
 
@@ -716,6 +759,7 @@ Performs the integer division \texttt{Rs / Rt}, writing the quotient into \textt
 
 \pagebreak
 \section{ERET - Return from Exception}
+\label{sec:eretinst}
 
 \subsection{Encoding}
 
@@ -745,6 +789,7 @@ ERET returns the processor to the state specified by the \texttt{EPC} coprocesso
 
 \pagebreak
 \section{FENCE}
+\label{sec:fenceinst}
 
 \subsection{Encoding}
 
@@ -771,6 +816,7 @@ Our architecture doesn't reorder requests, so right now FENCE is a no-op. If we 
 
 \pagebreak
 \section{FLUSH - Flush L1 Caches}
+\label{sec:flushinst}
 
 \subsection{Encoding}
 
@@ -817,6 +863,7 @@ Values for the \texttt{TYPE} field are as follows:
 
 \pagebreak
 \section{LB - Load Byte}
+\label{sec:lbinst}
 
 \subsection{Encoding}
 
@@ -845,6 +892,7 @@ LB loads a byte from the specified address into \texttt{Rd}. The address is comp
 
 \pagebreak
 \section{LH - Load Half-Word}
+\label{sec:lhinst}
 
 \subsection{Encoding}
 
@@ -873,6 +921,7 @@ LH loads two bytes from the specified address into \texttt{Rd}. The address is c
 
 \pagebreak
 \section{LL - Load Linked}
+\label{sec:llinst}
 
 \subsection{Encoding}
 
@@ -904,6 +953,7 @@ Additionally, LL sets the link bit. A future SC operation will only complete if 
 
 \pagebreak
 \section{LW - Load Word}
+\label{sec:lwinst}
 
 \subsection{Encoding}
 
@@ -932,6 +982,7 @@ LW loads a word from the specified address into \texttt{Rd}. The address is comp
 
 \pagebreak
 \section{MFC - Move From Coprocessor Register}
+\label{sec:mfcinst}
 
 \subsection{Encoding}
 
@@ -960,6 +1011,7 @@ MFC moves the contents of the specfied coprocessor register into the specified g
 
 \pagebreak
 \section{MFHI - Move From Multiply/Division Overflow Register}
+\label{sec:mfhiinst}
 
 \subsection{Encoding}
 
@@ -987,6 +1039,7 @@ MFHI moves the contents of the multiply/division overflow register into the spec
 
 \pagebreak
 \section{MOV - Move}
+\label{sec:movinst}
 
 \subsection{Encoding}
 
@@ -1022,6 +1075,7 @@ MOV moves the value of its source operand into the specified destination registe
 
 \pagebreak
 \section{MTC - Move To Coprocessor Register}
+\label{sec:mtcinst}
 
 \subsection{Encoding}
 
@@ -1050,6 +1104,7 @@ MTC moves the contents of the selected general-purpose register into the specifi
 
 \pagebreak
 \section{MTHI - Move To Multiply/Division Overflow Register}
+\label{sec:mthiinst}
 
 \subsection{Encoding}
 
@@ -1077,6 +1132,7 @@ MTHI moves the value of the specified general-purpose register into the multiply
 
 \pagebreak
 \section{MVN - Move and Invert}
+\label{sec:mvninst}
 
 \subsection{Encoding}
 
@@ -1113,6 +1169,7 @@ MVN inverts its source operand, storing the result in the specified destination 
 
 \pagebreak
 \section{MULT - Integer Multiplication}
+\label{sec:multinst}
 
 \subsection{Encoding}
 
@@ -1142,6 +1199,7 @@ MULT performs an integer multiplication on its two register operands. If the S b
 
 \pagebreak
 \section{NOR - Bitwise Logical NOR}
+\label{sec:norinst}
 
 \subsection{Encoding}
 
@@ -1175,6 +1233,7 @@ Computes the bitwise logical NOR of the two operands, storing the result in the 
 
 \pagebreak
 \section{OR - Bitwise Logical OR}
+\label{sec:orinst}
 
 \subsection{Encoding}
 
@@ -1208,6 +1267,7 @@ Computes the bitwise logical OR of the two operands, storing the result in the d
 
 \pagebreak
 \section{RSB - Reverse Subtraction}
+\label{sec:rsbinst}
 
 \subsection{Encoding}
 
@@ -1241,6 +1301,7 @@ Subtracts the value stored in RS from the value of the second operand, storing t
 
 \pagebreak
 \section{SB - Store Byte}
+\label{sec:sbinst}
 
 \subsection{Encoding}
 
@@ -1272,6 +1333,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 
 \pagebreak
 \section{SC - Store Conditional}
+\label{sec:scinst}
 
 \subsection{Encoding}
 
@@ -1306,6 +1368,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 
 \pagebreak
 \section{SH - Store Half-Word}
+\label{sec:shinst}
 
 \subsection{Encoding}
 
@@ -1337,6 +1400,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 
 \pagebreak
 \section{SUB - Subtraction}
+\label{sec:subinst}
 
 \subsection{Encoding}
 
@@ -1370,6 +1434,7 @@ Subtracts the value of the second operand from the value in \texttt{Rs}, storing
 
 \pagebreak
 \section{SW - Store Word}
+\label{sec:swinst}
 
 \subsection{Encoding}
 
@@ -1401,6 +1466,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 
 \pagebreak
 \section{SXB - Sign-Extend Byte}
+\label{sec:sxbinst}
 
 \subsection{Encoding}
 
@@ -1437,6 +1503,7 @@ SXB moves the low byte of its source operand into the specified destination regi
 
 \pagebreak
 \section{SXH - Sign-Extend Half-Word}
+\label{sec:sxhinst}
 
 \subsection{Encoding}
 
@@ -1473,6 +1540,7 @@ SXH moves the low two bytes of its source operand into the specified destination
 
 \pagebreak
 \section{SYSCALL - System Call Exception}
+\label{sec:syscallinst}
 
 \subsection{Encoding}
 
@@ -1499,6 +1567,7 @@ Note that this causes other instructions in the packet to be canceled.
 
 \pagebreak
 \section{XOR - Bitwise Exclusive OR}
+\label{sec:xorinst}
 
 \subsection{Encoding}
 
