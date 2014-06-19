@@ -283,28 +283,28 @@ Interrupt Code & Type\\
 
 \begin{table}[!h]
 \centering
+\scalebox{0.9}{
 \renewcommand{\arraystretch}{1.125}
-\begin{tabular}{|l|l|l|l|l|}
+\begin{tabular}{l|l|l|l|l}
+	Encoding & Mnemonic & Instruction & Action & Section(s) \\
 	\hline
-	Encoding & Mnemonic & Operation & Action & Section \\
-	\hline
-	0 0 0 0 & \texttt{ADD}     & Addition              & Rd := todo  & ~\ref{sec:addinst} \\
-	0 0 0 1 & \texttt{AND}     & Bitwise And           & Rd := todo  & ~\ref{sec:andinst} \\
-	0 0 1 0 & \texttt{NOR}     & Bitwise Logical NOR   & Rd := todo  & ~\ref{sec:norinst} \\
-	0 0 1 1 & \texttt{OR}      & Bitwise Logical OR    & Rd := todo  & ~\ref{sec:orinst} \\
-	0 1 0 0 & \texttt{SUB}     & Subtraction           & Rd := todo  & ~\ref{sec:subinst} \\
-	0 1 0 1 & \texttt{RSB}     & Reverse Subtraction   & Rd := todo  & ~\ref{sec:rsbinst} \\
-	0 1 1 0 & \texttt{XOR}     & Bitwise Exclusive OR  & Rd := todo  & ~\ref{sec:xorinst} \\
-	0 1 1 1 & \texttt{COMPARE} & Compare Instructions  & Rd := todo  & ~\ref{sec:cmpbcinst}, ~\ref{sec:cmpbsinst}, ~\ref{sec:cmpeqinst}, ~\ref{sec:cmplesinst}, ~\ref{sec:cmpleuinst}, ~\ref{sec:cmpltsinst}, ~\ref{sec:cmpltuinst} \\
-	1 0 0 0 & \texttt{MOV}     & Move                  & Rd := todo  & ~\ref{sec:movinst} \\
-	1 0 0 1 & \texttt{MVN}     & Move and Invert       & Rd := todo  & ~\ref{sec:mvninst} \\
-	1 0 1 0 & \texttt{SXB}     & Sign-Extend Byte      & Rd := todo  & ~\ref{sec:sxbinst} \\
-	1 0 1 1 & \texttt{SXH}     & Sign-Extend Half-Word & Rd := todo  & ~\ref{sec:sxhinst} \\
+	0 0 0 0 & \texttt{ADD}     & Addition              & \texttt{Rd := Rs + Op2}                   & ~\ref{sec:addinst} \\
+	0 0 0 1 & \texttt{AND}     & Bitwise And           & \texttt{Rd := Rs \& Op2}                  & ~\ref{sec:andinst} \\
+	0 0 1 0 & \texttt{NOR}     & Bitwise Logical NOR   & \texttt{Rd := \textasciitilde (Rs | Op2)} & ~\ref{sec:norinst} \\
+	0 0 1 1 & \texttt{OR}      & Bitwise Logical OR    & \texttt{Rd := Rs | Op2}                   & ~\ref{sec:orinst} \\
+	0 1 0 0 & \texttt{SUB}     & Subtraction           & \texttt{Rd := Rs - Op2}                   & ~\ref{sec:subinst} \\
+	0 1 0 1 & \texttt{RSB}     & Reverse Subtraction   & \texttt{Rd := Op2 - Rs}                   & ~\ref{sec:rsbinst} \\
+	0 1 1 0 & \texttt{XOR}     & Bitwise Exclusive OR  & \texttt{Rd := Rs $\hat{}$ Op2}            & ~\ref{sec:xorinst} \\
+	0 1 1 1 & \texttt{COMPARE} & Compare Instructions  & \texttt{Pd := Rs CMP Op2}                 & ~\ref{sec:cmpbcinst}, ~\ref{sec:cmpbsinst}, ~\ref{sec:cmpeqinst}, ~\ref{sec:cmplesinst}, ~\ref{sec:cmpleuinst}, ~\ref{sec:cmpltsinst}, ~\ref{sec:cmpltuinst} \\
+	1 0 0 0 & \texttt{MOV}     & Move                  & \texttt{Rd := Op2}                        & ~\ref{sec:movinst} \\
+	1 0 0 1 & \texttt{MVN}     & Move and Invert       & \texttt{Rd := \textasciitilde Op2}        & ~\ref{sec:mvninst} \\
+	1 0 1 0 & \texttt{SXB}     & Sign-Extend Byte      & \texttt{Rd := SX Op2[7:0]}                & ~\ref{sec:sxbinst} \\
+	1 0 1 1 & \texttt{SXH}     & Sign-Extend Half-Word & \texttt{Rd := SX Op2[15:0]}               & ~\ref{sec:sxhinst} \\
 	1 1 0 0 & reserved         & n/a                   & n/a & n/a \\
 	1 1 0 1 & reserved         & n/a                   & n/a & n/a \\
 	1 1 1 0 & reserved         & n/a                   & n/a & n/a \\
 	1 1 1 1 & reserved         & n/a                   & n/a & n/a \\
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 
