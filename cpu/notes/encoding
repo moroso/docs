@@ -55,7 +55,7 @@ OTHER_OPCODE[8:0] = {OPC_1[4:0], OPC_2[3:0]} =
   SYSCALL : 9'b0010x_xxxx
   FENCE   : 9'b0011x_xxxx
   ERET    : 9'b0100x_xxxx
-  CPOP    : 9'b0101x_xxxx
+  FLUSH   : 9'b0101x_xxxx
   MFC     : 9'b0110x_xxxx
   MTC     : 9'b0111x_xxxx
   MULT    : 9'b1000S_xxxx
