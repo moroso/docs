@@ -956,9 +956,9 @@ MFHI moves the contents of the multiply/division overflow register into the spec
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -1046,9 +1046,9 @@ MTHI moves the value of the specified general-purpose register into the multiply
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -1065,7 +1065,7 @@ MTHI moves the value of the specified general-purpose register into the multiply
 MVN is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
 
 \subsection{Behavior}
-MVN inverts its source operand, storing the result in the specified destination register. If the second operand is a register, it may be shifted by an immediate value or by the contents of a register before being inverted and stored.
+MVN takes the bitwise complement of its source operand, storing the result in the specified destination register. If the second operand is a register, it may be shifted by an immediate value or by the contents of a register before being inverted and stored.
 
 
 \pagebreak
@@ -1370,9 +1370,9 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & LONG\\
 	\hline
 \end{tabular}
 }
@@ -1406,9 +1406,9 @@ SXB moves the low byte of its source operand into the specified destination regi
 	\cline{1-32}
 	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
 	\cline{1-32}
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & \\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & LONG\\
 	\hline
 \end{tabular}
 }
