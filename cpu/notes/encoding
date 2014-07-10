@@ -55,7 +55,7 @@ OTHER_OPCODE[8:0] = {OPC_1[4:0], OPC_2[3:0]} =
   SYSCALL : 9'b0010x_xxxx
   FENCE   : 9'b0011x_xxxx
   ERET    : 9'b0100x_xxxx
-  CPOP    : 9'b0101x_xxxx
+  FLUSH   : 9'b0101x_xxxx
   MFC     : 9'b0110x_xxxx
   MTC     : 9'b0111x_xxxx
   MULT    : 9'b1000S_xxxx
@@ -68,9 +68,9 @@ OTHER_OPCODE[8:0] = {OPC_1[4:0], OPC_2[3:0]} =
             1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0
 alu1 short  PRED_ 0 CONSTANT_LOW_______ ROTATE_ ALUOPCO RD_______ CONST_HI_ 
 alu2 short  PRED_ 0 CONSTANT___________ ROTATE_ ALUOPCO RD_______ RS_______ 
-  (compare)                                     COMPARE CMPTP PN_
+  (compare)                                     COMPARE CMPTP PD_
 alu reg     PRED_ 1 0 1 SHIFTAMT_ SHF RT_______ ALUOPCO RD_______ RS_______ 
-  (compare)                                     COMPARE CMPTP PN_
+  (compare)                                     COMPARE CMPTP PD_
 load        PRED_ 1 0 0 1 OFFSET_________________ LSUOP RD_______ RS_______
 store       PRED_ 1 0 0 1 OFFSET_HI__ RT_______ M LSUOP OFFSET_LO RS_______
 branchimm   PRED_ 1 1 0 L OFFSET___________________________________________ 
@@ -81,9 +81,9 @@ alu long    PRED_ 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ALUOPCO RD_______ RS_______ LONG
 
 alu1 short  : rd <- ALU (CONSTANT[14:0] ROR {ROTATE,1'b0})
 alu2 short  : rd <- rs ALU (CONSTANT[9:0] ROR {ROTATE,1'b0})
-compare shor: pn <- rs COMPARE (CONSTANT[9:0] ROR {ROTATE,1'b0})
+compare shor: pd <- rs COMPARE (CONSTANT[9:0] ROR {ROTATE,1'b0})
 alu reg     : rd <- rs ALU (rt SHF SHIFTAMT)  [rs ignored for alu1]
-compare reg : pn <- rs COMPARE (rt SHF SHIFTAMT)
+compare reg : pd <- rs COMPARE (rt SHF SHIFTAMT)
 load        : LSUOP rd, OFFSET[11:0](rs)
 store       : LSUOP rt, {OFFSET_HI[5:0], M, OFFSET_LO[4:0]}(rs)
 branchimm   : pc <- pc + {{4{OFFSET[24]}, OFFSET[23:0], 4'b0000}

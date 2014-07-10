@@ -127,13 +127,17 @@ Encoding & Mnemonic & Purpose\\
 \texttt{00000} & PFLAGS & Processor control flags. See below.\\
 \texttt{00001} & PTB & Page Table Base Register. Specifies the start of the page directory for virtual address translation. Writes to this register flush the TLB.\\
 \texttt{00010} & EHA & Exception Handler Address. Specifies a virtual address to which to transfer control when an exception or interrupt is encountered.\\
-\texttt{00011} & EPC & Error PC. The virtual address of the last instruction packet to cause an exception, or the first instruction not executed due to an interrupt.\\
+\texttt{00011} & EPC & Error PC. The virtual address of the last instruction packet to cause an exception, or the first instruction not executed due to an interrupt.  LSBs contain system state when the exception occurred. \\
 \texttt{00100} & EC0 & Error Cause 0. The cause of an exception occurring on lane 0, or the type of a received interrupt. See Section~\ref{sec:exns} for a list of causes.\\
 \texttt{00101} & EC1 & Error Cause 1. The cause of an exception occurring on lane 1.\\
 \texttt{00110} & EC2 & Error Cause 2. The cause of an exception occurring on lane 2.\\
 \texttt{00111} & EC3 & Error Cause 3. The cause of an exception occurring on lane 3.\\
 \texttt{01000} & EA0 & Error Address 0. If lane 0 makes an invalid memory access, the virtual address it attempted to access will be stored in this register.\\
-\texttt{01001} & EA1 & Error Address 1. If lane 1 makes an invalid memory access, the virtual address it attempted to access will be stored in this register.
+\texttt{01001} & EA1 & Error Address 1. If lane 1 makes an invalid memory access, the virtual address it attempted to access will be stored in this register.\\
+\texttt{10000} & SP0 & Scratchpad register for system software usage.\\
+\texttt{10001} & SP1 & Scratchpad register for system software usage.\\
+\texttt{10010} & SP2 & Scratchpad register for system software usage.\\
+\texttt{10011} & SP3 & Scratchpad register for system software usage.
 \end{tabularx}
 \end{table}
 
@@ -141,6 +145,37 @@ Encoding & Mnemonic & Purpose\\
 
 At present, the PFLAGS register contains 2 flags: Bit 0 is 1 if interrupts are enabled, and bit 1 is 1 if paging is enabled. More control flags may be added here if needed.
 
+\subsection{The EPC Register}
+
+\begin{table}[!h]
+\centering
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & & & & & & & & & & & & & & & & & & & & & & & & & & & & & & &\\
+	1 & & & & & & & & & & & & & & & & & & & & & & & & & & & 4 & & & 1 & 0\\
+	\hline
+	\multicolumn{28}{|c|}{PC} & \multicolumn{2}{c}{RESV} & \multicolumn{1}{|c|}{IF} & \multicolumn{1}{c|}{M}\\
+	\hline
+\end{tabular}
+}
+\end{table}
+
+The \texttt{EPC} register's MSBs contain the PC at which an exception
+occurred.  (If an instruction fetch failed because of a paging exception,
+\texttt{EPC[PC]} contains the PC for which the fetch attempt failed.) The
+\texttt{M} field contains the system mode at the time that the exception
+occurred: if \texttt{EPC[M]} is set, then the system was in kernel mode at
+the time, and otherwise, the system was in user mode.  The \texttt{EPC[IF]}
+field contains the interrupt flag from \texttt{PFLAGS} at the time; if it is
+set, then interrupts were enabled, and if it is clear, than interrupts were
+disabled.
+
+\subsection{Scratchpad registers}
+
+Scratchpad registers are provided for the convenience of system software,
+should it wish to save and restore user registers (or other data) without
+reserving user-architectural registers for that purpose.  Their value is
+defined not to affect system state other than through reads and writes.
 
 \section{Exceptions and Interrupts}
 \label{sec:exns}
@@ -155,16 +190,15 @@ If an interrupt occurs, the code corresponding to that interrupt will be written
 \texttt{%
 \begin{tabular}{cccccccccccccccccccccccccccccccc}
 	3 & & & & & & & & & & & & & & & & & & & & & & & & & & & & & & &\\
-	1 & & & & & & & & & & & & & & & & & & & & & & & 8 & 7 & 6 & 5 & & & & 1 & 0\\
+	1 & & & & & & & & & & & & & & & & & & & & & & & & 7 & 6 & 5 & 4 & & & & 0\\
 	\hline
-	\multicolumn{24}{|c|}{RESERVED} & \multicolumn{2}{c}{INT} & \multicolumn{5}{|c|}{EXNTYPE} & \multicolumn{1}{c|}{M}\\
+	\multicolumn{25}{|c|}{RESERVED} & \multicolumn{2}{c}{INT} & \multicolumn{5}{|c|}{EXNTYPE} \\
 	\hline
 \end{tabular}
 }
 \end{table}
 
 \begin{itemize}
-  \item \texttt{M} is 1 if the processor was in kernel mode when the exception or interrupt occurred, or 0 otherwise.
   \item \texttt{EXNTYPE} corresponds to a value in Table~\ref{tab:exncodes} and indicates the type of exception that occurred.
   \item If \texttt{EXNTYPE} indicates that an interrupt occurred, \texttt{INT} will correspond to a value in Table~\ref{tab:intcodes} and signify the type of interrupt.
 \end{itemize}
@@ -210,26 +244,29 @@ Interrupt Code & Type\\
 
 \begin{table}[!h]
 \centering
-\scalebox{0.7}{\renewcommand{\tabcolsep}{0.15cm}\renewcommand{\arraystretch}{2}\begin{tabular}{rccccccccccccccccccccccccccccccccl}
+\scalebox{0.65}{
+\renewcommand{\tabcolsep}{0.175cm}
+\renewcommand{\arraystretch}{2.15}
+\begin{tabular}{rccccccccccccccccccccccccccccccccl}
 	& 31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 & 15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & \\
 	\cline{2-33}
 	ALU 1-Op Short \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 0 & \multicolumn{10}{|c}{Immediate Low 10} & \multicolumn{4}{|c|}{Rotate} & \multicolumn{4}{c}{ALU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Imm High 5} & \\
 	\cline{2-33}
 	ALU 2-Op Short \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 0 & \multicolumn{10}{|c}{Immediate 10} & \multicolumn{4}{|c|}{Rotate} & \multicolumn{4}{c}{ALU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Rs} & \\
 	\cline{2-33}
-	Compare Short \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 0 & \multicolumn{10}{|c}{Immediate 10} & \multicolumn{4}{|c|}{Rotate} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c}{Ctype} & \multicolumn{2}{|c}{Pn} & \multicolumn{5}{|c|}{Rs} & \\
+	Compare Short \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 0 & \multicolumn{10}{|c}{Immediate 10} & \multicolumn{4}{|c|}{Rotate} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c}{Ctype} & \multicolumn{2}{|c}{Pd} & \multicolumn{5}{|c|}{Rs} & \\
 	\cline{2-33}
 	ALU Register \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 1 & \multicolumn{5}{|c}{Shift amount} & \multicolumn{2}{|c}{Stype} & \multicolumn{5}{|c|}{Rt} & \multicolumn{4}{c}{ALU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Rs} & \\
 	\cline{2-33}
-	Compare Register \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 1 & \multicolumn{5}{|c}{Shift amount} & \multicolumn{2}{|c}{Stype} & \multicolumn{5}{|c|}{Rt} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c}{Ctype} & \multicolumn{2}{|c}{Pn} & \multicolumn{5}{|c|}{Rs} & \\
+	Compare Register \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 1 & \multicolumn{5}{|c}{Shift amount} & \multicolumn{2}{|c}{Stype} & \multicolumn{5}{|c|}{Rt} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c}{Ctype} & \multicolumn{2}{|c}{Pd} & \multicolumn{5}{|c|}{Rs} & \\
 	\cline{2-33}
 	Load \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c}{Offset 12} & \multicolumn{3}{|c}{LSU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Rs} & \\
 	\cline{2-33}
 	Store \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 0 & 1 & \multicolumn{6}{|c}{Offset High 6} & \multicolumn{5}{|c|}{Rt} & M & \multicolumn{3}{|c}{LSU Opcode} & \multicolumn{5}{|c}{Offset Low 5} & \multicolumn{5}{|c|}{Rs} & \\
 	\cline{2-33}
-	Branch immediate \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 1 & 0 & L & \multicolumn{25}{|c|}{Offset 25} & \\
+	Branch immediate \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 1 & 0 & \multicolumn{1}{|c}{L} & \multicolumn{25}{|c|}{Offset 25} & \\
 	\cline{2-33}
-	Branch register \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 1 & 0 & L & \multicolumn{20}{|c}{Offset 20} & \multicolumn{5}{|c|}{Rs} & \\
+	Branch register \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 1 & 1 & \multicolumn{1}{|c}{L} & \multicolumn{20}{|c}{Offset 20} & \multicolumn{5}{|c|}{Rs} & \\
 	\cline{2-33}
 	Control \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{Ctrl Opcode High} & \multicolumn{5}{|c}{Rt} & \multicolumn{4}{|c}{Ctrl Opcode Low} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Rs} & \\
 	\cline{2-33}
@@ -241,7 +278,34 @@ Interrupt Code & Type\\
 \end{tabular}}
 \end{table}
 
+\pagebreak
+\section{ALU Opcodes}
 
+\begin{table}[!h]
+\centering
+\scalebox{0.9}{
+\renewcommand{\arraystretch}{1.125}
+\begin{tabular}{l|l|l|l|l}
+	Encoding & Mnemonic & Instruction & Action & Section(s) \\
+	\hline
+	0 0 0 0 & \texttt{ADD}     & Addition              & \texttt{Rd := Rs + Op2}                   & ~\ref{sec:addinst} \\
+	0 0 0 1 & \texttt{AND}     & Bitwise And           & \texttt{Rd := Rs \& Op2}                  & ~\ref{sec:andinst} \\
+	0 0 1 0 & \texttt{NOR}     & Bitwise Logical NOR   & \texttt{Rd := \textasciitilde (Rs | Op2)} & ~\ref{sec:norinst} \\
+	0 0 1 1 & \texttt{OR}      & Bitwise Logical OR    & \texttt{Rd := Rs | Op2}                   & ~\ref{sec:orinst} \\
+	0 1 0 0 & \texttt{SUB}     & Subtraction           & \texttt{Rd := Rs - Op2}                   & ~\ref{sec:subinst} \\
+	0 1 0 1 & \texttt{RSB}     & Reverse Subtraction   & \texttt{Rd := Op2 - Rs}                   & ~\ref{sec:rsbinst} \\
+	0 1 1 0 & \texttt{XOR}     & Bitwise Exclusive OR  & \texttt{Rd := Rs $\hat{}$ Op2}            & ~\ref{sec:xorinst} \\
+	0 1 1 1 & \texttt{COMPARE} & Compare Instructions  & \texttt{Pd := Rs CMP Op2}                 & ~\ref{sec:cmpbcinst}, ~\ref{sec:cmpbsinst}, ~\ref{sec:cmpeqinst}, ~\ref{sec:cmplesinst}, ~\ref{sec:cmpleuinst}, ~\ref{sec:cmpltsinst}, ~\ref{sec:cmpltuinst} \\
+	1 0 0 0 & \texttt{MOV}     & Move                  & \texttt{Rd := Op2}                        & ~\ref{sec:movinst} \\
+	1 0 0 1 & \texttt{MVN}     & Move and Invert       & \texttt{Rd := \textasciitilde Op2}        & ~\ref{sec:mvninst} \\
+	1 0 1 0 & \texttt{SXB}     & Sign-Extend Byte      & \texttt{Rd := SX Op2[7:0]}                & ~\ref{sec:sxbinst} \\
+	1 0 1 1 & \texttt{SXH}     & Sign-Extend Half-Word & \texttt{Rd := SX Op2[15:0]}               & ~\ref{sec:sxhinst} \\
+	1 1 0 0 & reserved         & n/a                   & n/a & n/a \\
+	1 1 0 1 & reserved         & n/a                   & n/a & n/a \\
+	1 1 1 0 & reserved         & n/a                   & n/a & n/a \\
+	1 1 1 1 & reserved         & n/a                   & n/a & n/a \\
+\end{tabular}}
+\end{table}
 
 
 
@@ -250,6 +314,7 @@ Interrupt Code & Type\\
 
 \pagebreak
 \section{ADD - Addition}
+\label{sec:addinst}
 
 \subsection{Encoding}
 
@@ -270,8 +335,9 @@ Interrupt Code & Type\\
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!ADD[PN] Rd, Rs, #Imm!
-  \item \verb!ADD[PN] Rd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Rd <- Rs + Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs + Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs + (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -284,6 +350,7 @@ TODO optional overflow exceptions???
 
 \pagebreak
 \section{AND - Bitwise And}
+\label{sec:andinst}
 
 \subsection{Encoding}
 
@@ -304,8 +371,9 @@ TODO optional overflow exceptions???
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!AND[PN] Rd, Rs, #Imm!
-  \item \verb!AND[PN] Rd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Rd <- Rs & Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs & Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs & (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -316,6 +384,7 @@ Computes the bitwise logical AND of the two operands, storing the result in the 
 
 \pagebreak
 \section{B - Branch}
+\label{sec:binst}
 
 \subsection{Encoding}
 
@@ -334,8 +403,8 @@ Computes the bitwise logical AND of the two operands, storing the result in the 
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!B[PN] <label>!
-  \item \verb!B[PN] (Rs + OFF)!
+  \item \verb@[[!]Pn ->] B <label>@
+  \item \verb@[[!]Pn ->] B Rs + OFF@
 \end{itemize}
 
 \subsection{Type}
@@ -347,6 +416,7 @@ Transfers control to the address specified. The \texttt{OFFSET} field is shifted
 
 \pagebreak
 \section{BL - Branch with Link}
+\label{sec:blinst}
 
 \subsection{Encoding}
 
@@ -365,8 +435,8 @@ Transfers control to the address specified. The \texttt{OFFSET} field is shifted
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!BL[PN] <label>!
-  \item \verb!BL[PN] (Rs + OFF)!
+  \item \verb@[[!]Pn ->] BL <label>@
+  \item \verb@[[!]Pn ->] BL Rs + OFF@
 \end{itemize}
 
 \subsection{Type}
@@ -376,7 +446,8 @@ Branch with Link is a Control operation. It may only be placed as the first inst
 BL functions identically to the Branch instruction, except that the address of the BL instruction is placed in R31.
 
 \pagebreak
-\section{BREAK - TODO XXX}
+\section{BREAK}
+\label{sec:breakinst}
 
 \subsection{Encoding}
 
@@ -390,8 +461,19 @@ BL functions identically to the Branch instruction, except that the address of t
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] BREAK@
+  \item \verb@[[!]Pn ->] BREAK Imm@
+\end{itemize}
+
+\subsection{Behavior}
+Equivalent to SYSCALL, except that the exception code stored in EC0 is different - See Section~\ref{sec:exns}.
+
 \pagebreak
 \section{CMPBC - Compare Bits Clear}
+\label{sec:cmpbcinst}
 
 \subsection{Encoding}
 
@@ -412,8 +494,8 @@ BL functions identically to the Branch instruction, except that the address of t
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!CMPBC[PN] Pd, Rs, #Imm!
-  \item \verb!CMPBC[PN] Pd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Pd <- Rs BC Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs BC (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -427,6 +509,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPBS - Compare Bits Set}
+\label{sec:cmpbsinst}
 
 \subsection{Encoding}
 
@@ -447,8 +530,10 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!CMPBS[PN] Pd, Rs, #Imm!
-  \item \verb!CMPBS[PN] Pd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Pd <- Rs BS Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs & Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs BS (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs & (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -462,6 +547,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPEQ - Compare Equal}
+\label{sec:cmpeqinst}
 
 \subsection{Encoding}
 
@@ -482,8 +568,8 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!CMPEQ[PN] Pd, Rs, #Imm!
-  \item \verb!CMPEQ[PN] Pd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Pd <- Rs == Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs == (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -498,6 +584,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPLES - Compare Less Than or Equal (Signed)}
+\label{sec:cmplesinst}
 
 \subsection{Encoding}
 
@@ -518,8 +605,10 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!CMPLES[PN] Pd, Rs, #Imm!
-  \item \verb!CMPLES[PN] Pd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Pd <- Rs LES Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs <=s Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs LES (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs <=s (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -534,6 +623,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPLEU - Compare Less Than or Equal (Unsigned)}
+\label{sec:cmpleuinst}
 
 \subsection{Encoding}
 
@@ -554,8 +644,12 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!CMPLEU[PN] Pd, Rs, #Imm!
-  \item \verb!CMPLEU[PN] Pd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Pd <- Rs LEU Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs <= Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs <=u Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs LEU (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs <= (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs <=u (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -570,6 +664,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPLTS - Compare Less Than (Signed)}
+\label{sec:cmpltsinst}
 
 \subsection{Encoding}
 
@@ -590,8 +685,10 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!CMPLTS[PN] Pd, Rs, #Imm!
-  \item \verb!CMPLTS[PN] Pd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Pd <- Rs LTS Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs <s Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs LTS (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs <s (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -606,6 +703,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{CMPLTU - Compare Less Than (Unsigned)}
+\label{sec:cmpltuinst}
 
 \subsection{Encoding}
 
@@ -626,8 +724,12 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!CMPLTU[PN] Pd, Rs, #Imm!
-  \item \verb!CMPLTU[PN] Pd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Pd <- Rs LTU Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs < Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs <u Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs LTU (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs < (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs <u (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -643,6 +745,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 
 \pagebreak
 \section{DIV - Integer Division}
+\label{sec:divinst}
 
 \subsection{Encoding}
 
@@ -659,7 +762,9 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!DIV[PN] Rd, Rs, Rt!
+  \item \verb@[[!]Pn ->] Rd <- Rs / Rt@ (defaults to unsigned)
+  \item \verb@[[!]Pn ->] Rd <- Rs /s Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs /u Rt@
 \end{itemize}
 
 \subsection{Type}
@@ -673,6 +778,7 @@ Performs the integer division \texttt{Rs / Rt}, writing the quotient into \textt
 
 \pagebreak
 \section{ERET - Return from Exception}
+\label{sec:eretinst}
 
 \subsection{Encoding}
 
@@ -689,7 +795,7 @@ Performs the integer division \texttt{Rs / Rt}, writing the quotient into \textt
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!ERET[PN]!
+  \item \verb@[[!]Pn ->] ERET@
 \end{itemize}
 
 \subsection{Type}
@@ -697,11 +803,12 @@ Performs the integer division \texttt{Rs / Rt}, writing the quotient into \textt
 ERET is a Control operation. It may only be placed as the first instruction in a packet. It may only be used when the processor is in kernel mode.
 
 \subsection{Behavior}
-ERET returns the processor to user mode from kernel mode, and branches to the memory address contained in the Error PC control register. Other instructions in the same packet as the ERET instruction are executed in kernel mode before control is transferred. This instruction also clears the memory link bit. 
+ERET returns the processor to the state specified by the \texttt{EPC} coprocessor register.  Specifically, the program counter takes on the value from \texttt{EPC[PC]}, the system mode flag takes on the value from \texttt{EPC[M]} (kernel mode if \texttt{M} is 1, otherwise user mode), and the interrupt enable flag takes on the value from \texttt{EPC[IF]} (interrupts enabled if \texttt{IF} is 1, otherwise disabled).  Other instructions in the same packet as the ERET instruction are executed in kernel mode before control is transferred.  This instruction also clears the memory link bit. 
 
 
 \pagebreak
 \section{FENCE}
+\label{sec:fenceinst}
 
 \subsection{Encoding}
 
@@ -717,7 +824,7 @@ ERET returns the processor to user mode from kernel mode, and branches to the me
 
 \subsection{Syntax}
 \begin{itemize}
-  \item \verb!FENCE[PN]!
+  \item \verb@[[!]Pn ->] FENCE@
 \end{itemize}
 
 \subsection{Type}
@@ -728,6 +835,7 @@ Our architecture doesn't reorder requests, so right now FENCE is a no-op. If we 
 
 \pagebreak
 \section{FLUSH - Flush L1 Caches}
+\label{sec:flushinst}
 
 \subsection{Encoding}
 
@@ -744,7 +852,7 @@ Our architecture doesn't reorder requests, so right now FENCE is a no-op. If we 
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!FLUSH[PN] TYPE, Rs!
+  \item \verb@[[!]Pn ->] FLUSH.<TYPE> Rs@
 \end{itemize}
 
 \subsection{Type}
@@ -774,6 +882,7 @@ Values for the \texttt{TYPE} field are as follows:
 
 \pagebreak
 \section{LB - Load Byte}
+\label{sec:lbinst}
 
 \subsection{Encoding}
 
@@ -790,7 +899,7 @@ Values for the \texttt{TYPE} field are as follows:
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!LB[PN] Rd, (Rs [+ OFFSET])!
+  \item \verb@[[!]Pn ->] Rd <- *b(Rs [+ OFFSET])@
 \end{itemize}
 
 \subsection{Type}
@@ -802,6 +911,7 @@ LB loads a byte from the specified address into \texttt{Rd}. The address is comp
 
 \pagebreak
 \section{LH - Load Half-Word}
+\label{sec:lhinst}
 
 \subsection{Encoding}
 
@@ -818,7 +928,7 @@ LB loads a byte from the specified address into \texttt{Rd}. The address is comp
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!LH[PN] Rd, (Rs [+ OFFSET])!
+  \item \verb@[[!]Pn ->] Rd <- *h(Rs [+ OFFSET])@
 \end{itemize}
 
 \subsection{Type}
@@ -830,6 +940,7 @@ LH loads two bytes from the specified address into \texttt{Rd}. The address is c
 
 \pagebreak
 \section{LL - Load Linked}
+\label{sec:llinst}
 
 \subsection{Encoding}
 
@@ -846,7 +957,7 @@ LH loads two bytes from the specified address into \texttt{Rd}. The address is c
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!LL[PN] Rd, (Rs [+ OFFSET])!
+  \item \verb@[[!]Pn ->] Rd <- *ll(Rs [+ OFFSET])@
 \end{itemize}
 
 \subsection{Type}
@@ -861,6 +972,7 @@ Additionally, LL sets the link bit. A future SC operation will only complete if 
 
 \pagebreak
 \section{LW - Load Word}
+\label{sec:lwinst}
 
 \subsection{Encoding}
 
@@ -877,7 +989,8 @@ Additionally, LL sets the link bit. A future SC operation will only complete if 
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!LW[PN] Rd, (Rs [+ OFFSET])!
+  \item \verb@[[!]Pn ->] Rd <- *l(Rs [+ OFFSET])@
+  \item \verb@[[!]Pn ->] Rd <- *w(Rs [+ OFFSET])@
 \end{itemize}
 
 \subsection{Type}
@@ -889,6 +1002,7 @@ LW loads a word from the specified address into \texttt{Rd}. The address is comp
 
 \pagebreak
 \section{MFC - Move From Coprocessor Register}
+\label{sec:mfcinst}
 
 \subsection{Encoding}
 
@@ -905,7 +1019,7 @@ LW loads a word from the specified address into \texttt{Rd}. The address is comp
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!MFC[PN] Rd, CPRs!
+  \item \verb@[[!]Pn ->] Rd <- CPRs@
 \end{itemize}
 
 \subsection{Type}
@@ -917,6 +1031,7 @@ MFC moves the contents of the specfied coprocessor register into the specified g
 
 \pagebreak
 \section{MFHI - Move From Multiply/Division Overflow Register}
+\label{sec:mfhiinst}
 
 \subsection{Encoding}
 
@@ -925,7 +1040,7 @@ MFC moves the contents of the specfied coprocessor register into the specified g
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & \multicolumn{5}{|c|}{RD} & X & X & X & X & \multicolumn{1}{c|}{X}\\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 1 & 0 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & \multicolumn{5}{|c|}{RD} & X & X & X & X & \multicolumn{1}{c|}{X}\\
 	\hline
 \end{tabular}
 }
@@ -933,7 +1048,7 @@ MFC moves the contents of the specfied coprocessor register into the specified g
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!MFHI[PN] Rd!
+  \item \verb@[[!]Pn ->] Rd <- OVF@
 \end{itemize}
 
 \subsection{Type}
@@ -944,6 +1059,7 @@ MFHI moves the contents of the multiply/division overflow register into the spec
 
 \pagebreak
 \section{MOV - Move}
+\label{sec:movinst}
 
 \subsection{Encoding}
 
@@ -966,9 +1082,10 @@ MFHI moves the contents of the multiply/division overflow register into the spec
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!MOV[PN] Rd, #Imm!
-  \item \verb!MOV[PN] Rd, Rt [SHF #Imm]!
-  \item \verb!MOV[PN] Rd, Rt SHF Rs!
+  \item \verb@[[!]Pn ->] Rd <- Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rt@
+  \item \verb@[[!]Pn ->] Rd <- (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rs SHF Rt@
 \end{itemize}
 
 \subsection{Type}
@@ -979,6 +1096,7 @@ MOV moves the value of its source operand into the specified destination registe
 
 \pagebreak
 \section{MTC - Move To Coprocessor Register}
+\label{sec:mtcinst}
 
 \subsection{Encoding}
 
@@ -995,7 +1113,7 @@ MOV moves the value of its source operand into the specified destination registe
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!MTC[PN] CPRd, Rs!
+  \item \verb@[[!]Pn ->] CPRd <- Rs@
 \end{itemize}
 
 \subsection{Type}
@@ -1007,6 +1125,7 @@ MTC moves the contents of the selected general-purpose register into the specifi
 
 \pagebreak
 \section{MTHI - Move To Multiply/Division Overflow Register}
+\label{sec:mthiinst}
 
 \subsection{Encoding}
 
@@ -1015,7 +1134,7 @@ MTC moves the contents of the selected general-purpose register into the specifi
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X& X & \multicolumn{5}{|c|}{RS} \\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 1 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X& X & \multicolumn{5}{|c|}{RS} \\
 	\hline
 \end{tabular}
 }
@@ -1023,7 +1142,7 @@ MTC moves the contents of the selected general-purpose register into the specifi
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!MTHI[PN] Rs!
+  \item \verb@[[!]Pn ->] OVF <- Rs@
 \end{itemize}
 
 \subsection{Type}
@@ -1034,6 +1153,7 @@ MTHI moves the value of the specified general-purpose register into the multiply
 
 \pagebreak
 \section{MVN - Move and Invert}
+\label{sec:mvninst}
 
 \subsection{Encoding}
 
@@ -1056,9 +1176,8 @@ MTHI moves the value of the specified general-purpose register into the multiply
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!MVN[PN] Rd, #Imm!
-  \item \verb!MVN[PN] Rd, Rt [SHF #Imm]!
-  \item \verb!MVN[PN] Rd, Rt SHF Rs!
+  \item \verb@[[!]Pn ->] Rd <- ~Imm@
+  \item \verb@[[!]Pn ->] Rd <- ~(Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -1070,6 +1189,7 @@ MVN takes the bitwise complement of its source operand, storing the result in th
 
 \pagebreak
 \section{MULT - Integer Multiplication}
+\label{sec:multinst}
 
 \subsection{Encoding}
 
@@ -1086,8 +1206,9 @@ MVN takes the bitwise complement of its source operand, storing the result in th
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!MULT[PN] Rd, Rs, Rt!
-  \item \verb!MULTS[PN] Rd, Rs, Rt!
+  \item \verb@[[!]Pn ->] Rd <- Rs * Rt@ (defaults to unsigned)
+  \item \verb@[[!]Pn ->] Rd <- Rs *s Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs *u Rt@
 \end{itemize}
 
 \subsection{Type}
@@ -1099,6 +1220,7 @@ MULT performs an integer multiplication on its two register operands. If the S b
 
 \pagebreak
 \section{NOR - Bitwise Logical NOR}
+\label{sec:norinst}
 
 \subsection{Encoding}
 
@@ -1119,8 +1241,12 @@ MULT performs an integer multiplication on its two register operands. If the S b
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!NOR[PN] Rd, Rs, #Imm!
-  \item \verb!NOR[PN] Rd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Rd <- Rs ~| Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs NOR Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs ~| Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs NOR Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs ~| (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rs NOR (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -1132,6 +1258,7 @@ Computes the bitwise logical NOR of the two operands, storing the result in the 
 
 \pagebreak
 \section{OR - Bitwise Logical OR}
+\label{sec:orinst}
 
 \subsection{Encoding}
 
@@ -1152,8 +1279,12 @@ Computes the bitwise logical NOR of the two operands, storing the result in the 
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!OR[PN] Rd, Rs, #Imm!
-  \item \verb!OR[PN] Rd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Rd <- Rs | Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs OR Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs | Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs OR Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs | (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rs OR (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -1165,6 +1296,7 @@ Computes the bitwise logical OR of the two operands, storing the result in the d
 
 \pagebreak
 \section{RSB - Reverse Subtraction}
+\label{sec:rsbinst}
 
 \subsection{Encoding}
 
@@ -1185,8 +1317,12 @@ Computes the bitwise logical OR of the two operands, storing the result in the d
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!RSB[PN] Rd, Rs, #Imm!
-  \item \verb!RSB[PN] Rd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Rd <- Rs -: Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs RSB Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs -: Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs RSB Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs -: (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rs RSB (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -1198,6 +1334,7 @@ Subtracts the value stored in RS from the value of the second operand, storing t
 
 \pagebreak
 \section{SB - Store Byte}
+\label{sec:sbinst}
 
 \subsection{Encoding}
 
@@ -1214,7 +1351,7 @@ Subtracts the value stored in RS from the value of the second operand, storing t
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!SB[PN] Rt, (Rs [+ OFFSET])!
+  \item \verb@[[!]Pn ->] *b(Rs [+ OFFSET]) <- Rt@
 \end{itemize}
 
 \subsection{Type}
@@ -1229,6 +1366,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 
 \pagebreak
 \section{SC - Store Conditional}
+\label{sec:scinst}
 
 \subsection{Encoding}
 
@@ -1245,7 +1383,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!SC[PN] Rt, (Rs [+ OFFSET])!
+  \item \verb@[[!]Pn ->] *sc(Rs [+ OFFSET]) <- Rt@
 \end{itemize}
 
 \subsection{Type}
@@ -1263,6 +1401,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 
 \pagebreak
 \section{SH - Store Half-Word}
+\label{sec:shinst}
 
 \subsection{Encoding}
 
@@ -1279,7 +1418,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!SH[PN] Rt, (Rs [+ OFFSET])!
+  \item \verb@[[!]Pn ->] *h(Rs [+ OFFSET]) <- Rt@
 \end{itemize}
 
 \subsection{Type}
@@ -1294,6 +1433,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 
 \pagebreak
 \section{SUB - Subtraction}
+\label{sec:subinst}
 
 \subsection{Encoding}
 
@@ -1314,8 +1454,12 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!SUB[PN] Rd, Rs, #Imm!
-  \item \verb!SUB[PN] Rd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Rd <- Rs - Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs SUB Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs - Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs SUB Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs - (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rs SUB (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -1327,6 +1471,7 @@ Subtracts the value of the second operand from the value in \texttt{Rs}, storing
 
 \pagebreak
 \section{SW - Store Word}
+\label{sec:swinst}
 
 \subsection{Encoding}
 
@@ -1343,7 +1488,8 @@ Subtracts the value of the second operand from the value in \texttt{Rs}, storing
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!SW[PN] Rt, (Rs [+ OFFSET])!
+  \item \verb@[[!]Pn ->] *l(Rs [+ OFFSET]) <- Rt@
+  \item \verb@[[!]Pn ->] *w(Rs [+ OFFSET]) <- Rt@
 \end{itemize}
 
 \subsection{Type}
@@ -1358,6 +1504,7 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 
 \pagebreak
 \section{SXB - Sign-Extend Byte}
+\label{sec:sxbinst}
 
 \subsection{Encoding}
 
@@ -1380,9 +1527,8 @@ The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:1
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!SXB[PN] Rd, #Imm!
-  \item \verb!SXB[PN] Rd, Rt [SHF #Imm]!
-  \item \verb!SXB[PN] Rd, Rt SHF Rs!
+  \item \verb@[[!]Pn ->] Rd <- SXB Imm@
+  \item \verb@[[!]Pn ->] Rd <- SXB (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -1394,6 +1540,7 @@ SXB moves the low byte of its source operand into the specified destination regi
 
 \pagebreak
 \section{SXH - Sign-Extend Half-Word}
+\label{sec:sxhinst}
 
 \subsection{Encoding}
 
@@ -1416,9 +1563,8 @@ SXB moves the low byte of its source operand into the specified destination regi
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!SXH[PN] Rd, #Imm!
-  \item \verb!SXH[PN] Rd, Rt [SHF #Imm]!
-  \item \verb!SXH[PN] Rd, Rt SHF Rs!
+  \item \verb@[[!]Pn ->] Rd <- SXH Imm@
+  \item \verb@[[!]Pn ->] Rd <- SXH (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
@@ -1429,7 +1575,8 @@ SXH moves the low two bytes of its source operand into the specified destination
 
 
 \pagebreak
-\section{SYSCALL - TODO XXX}
+\section{SYSCALL - System Call Exception}
+\label{sec:syscallinst}
 
 \subsection{Encoding}
 
@@ -1443,8 +1590,21 @@ SXH moves the low two bytes of its source operand into the specified destination
 \end{tabular}
 }
 
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] SYSCALL@
+  \item \verb@[[!]Pn ->] SYSCALL Imm@
+\end{itemize}
+
+\subsection{Behavior}
+
+SYSCALL causes an exception to occur on the instruction packet of which it is a part. Its corresponding error code is placed in the EC0 coprocessor register - see Section~\ref{sec:exns} for details.
+Note that this causes other instructions in the packet to be canceled.
+
 \pagebreak
 \section{XOR - Bitwise Exclusive OR}
+\label{sec:xorinst}
 
 \subsection{Encoding}
 
@@ -1465,8 +1625,12 @@ SXH moves the low two bytes of its source operand into the specified destination
 \subsection{Syntax}
 
 \begin{itemize}
-  \item \verb!XOR[PN] Rd, Rs, #Imm!
-  \item \verb!XOR[PN] Rd, Rs, Rt [SHF #Imm]!
+  \item \verb@[[!]Pn ->] Rd <- Rs ^ Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs XOR Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs ^ Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs XOR Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs ^ (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rs XOR (Rt SHF Imm)@
 \end{itemize}
 
 \subsection{Type}
