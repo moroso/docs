@@ -1,0 +1,29 @@
+r31: link register
+r30: stack pointer
+
+r8, r9, r10: used by the compiler for spilled registers; can be treated as
+general caller save registers by asm.
+
+r0..r7: args/caller save
+r8..r10: caller save
+r11..r29: callee save
+
+r0 is the return value of the function
+
+
+When entering a function, r30 should point to the earliest available
+part of the stack.
+
+Any arguments that didn't fit in registers are before it in the stack,
+so *(r31-4) is the last argument in every case.
+
+So, if we call f(1,2,3,4,5,6,7,8,9,10,11,12,13), we'll call with:
+
+r0=1, r1=2, ..., r7=8.
+
+The stack will look like:
+
+... 9 10 11 12 13
+
+with r30 pointing just after the 13. The function being called will almost
+certainly want to store r31 at the address pointed to by r30.
