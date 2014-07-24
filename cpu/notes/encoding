@@ -30,9 +30,9 @@ COMPARE_TYPE[2:0] = /* "CMPTP" */
   CMPBC  : 3'b111
 
 SHIFT[1:0] =    /* "SHF" */
-  SLL : 2'b00 |
-  SRA : 2'b01 |
-  SRL : 2'b10 |
+  LSL : 2'b00 |
+  LSR : 2'b01 |
+  ASR : 2'b10 |
   ROR : 2'b11
 
 LSUOPCO[2:0] =
