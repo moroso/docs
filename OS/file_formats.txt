@@ -1,0 +1,28 @@
+We use some dead simple file formats:
+
+(All numbers and sizes and addresses are 4 bytes, little endian.)
+
+The Moroso BS executable format:
+* First, there is a header:
+ * Magic number: "MROE" (for 'MoRosO Executable')
+ * Number of bytes of data following the header
+ * Size of region to map for executable
+ * Base address to load the executable at
+ * Entry point address
+* Then, the actual executable data
+
+The size of region to map may be larger than the amount of data in
+order to support a .bss region.
+
+
+The Moroso BSFS format:
+* First, a header:
+ * Magic number: "MROF" (for 'MoRosO Filesystem)
+ * num_files, the number of files in the file system
+* Then, a file table with num_files file table entries:
+ * Offset that the file starts at
+ * Size of the file
+ * 40 character file name field - null terminated
+   (This sucks but I don't care; if this makes anybody /really/ mad I
+    could change it.)
+* Then, a bunch of data
