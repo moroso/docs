@@ -5,7 +5,6 @@ MorosOS To-Do:
 3 some new problems, mostly tricky but known implementation
 4 Hard.  Lots of new things to think about/tricky to get right
 5 Hardest.  Will need a lot of thought put into both implementation and design 
-  (in case things get harder)
 
 Bootloader (1) 
   must be able to load kernel
@@ -25,7 +24,7 @@ Standard library functions (N/A)
 Interrupt handling (4)
   enable device drivers to handle interrupts
 
-IPC (4)
+IPC (5)
 
 Servers (4)
   Console, sound, file, VM? timer/keyboard?
@@ -35,12 +34,12 @@ Syscalls/OS core  (3)
   usermode
 
 I/O (4)
-  making use of video/audio resources
+  use video/audio resources
 
 Filesystem (1)
   whatever works, really.  We're not looking to get fancy
 
-Object file format/linker/loading programs (2)
+Object file format/linker/loading programs (1)
 
 Thread Library (2)
 

@@ -74,7 +74,8 @@ console privileges and allocations.
 
 The same protocol can be used for other I/O resources, such as sound.
 
-Additionally, the kernel and hardware will have no notion of text, so we will have
+Additionally, the kernel and hardware will have no notion of text, so we will
+have
 instead a text-mode server that manages text-based display services.
 
 Expect VGA graphics.
@@ -158,35 +159,86 @@ MorosOS will implement COW for fork.
 *Hardware note*
 We have no notion of segments, and the hardware has no notion of an IDT.
 Hardware is making something close to MIPs' SYSCALL/SYSRET instructions for mode
-switch.
+
+switch.   
+
 ## Interprocess Communication ##
 
-Since IPC is going to be the backbone of our system, it is important
-that we have a performant and usable IPC mechanism.
-There is a lot of design space for IPC mechanisms that I try to
-summarize without really knowing what I am doing:
-* Is send synchronous or asynchronous? (That is, does send block until
-there is a receiver, or are messages buffered?)
-* If send is synchronous, do we have a notion of message replies?
-* What are the "targets" for IPC messages? Threads or some sort of
-channel/mailbox thing? If we have mailboxes, do we have something like
-select()?
-* What is the payload of messages? Registers? Short buffers? Pages?
-Can we share pages or just send them?
-* What controls do we want for who can send messages to what targets?
-Do we want some sort of access control?
+Interprocess communication (IPC) is what enables user threads in a microkernel
+to
+communicate across address spaces, and as such acts as the foundation for the
+entire userspace: IPC enables developers to create crucial resources for
+applications, such as servers and thread libraries.  With this in mind, the
+interface for IPC in MorosOS should enable the following: 
 
+* **Handing off Resources:**
+Threads should be able to request and receive resources from userland
+servers.  This    requires an exchange, where if Thread A requests a resource
+from Thread B, Thread B is able to relinquish it and make said resource
+available to thread A, without shared ownership.  
 
-I suspect that we want synchronous IPC with replies; that seems to
-correspond with RPC calls and it means we don't need to do message
-buffering in the kernel.
+* **Synchronization**
+IPC will be responsible for providing the foundation of the userland
+synchronization primitives.  This means that it should provide an interface to
+the kernel that will allow the writer of a thread library to implement
+thr\_create, sleep, deschedule/make\_runnable (as seen in the 410 thread
+library)
 
-I think we should be able to have a hella-optimized fast path for
-IPC send to threads that are already blocked. Especially for short
-messages that fit in registers, we could have an assembly fast path
-that looks the target up in a flat table, sees if a thread is waiting,
-and if so switches to that address space and thread and returns to
-userspace with the message in registers or something.
+* **Signaling**
+Moreover, IPC should provide an interface to a signaling system, to be
+used by userland device drivers to receive interrupts and resources.  
+
+* **Performance**
+    Historically, IPC has been a bottleneck in many microkernels.  While it’s
+not clear yet how good performance should be defined, developers should operate
+under the principle that IPC should “not suck” performance-wise relative to
+other operations.
+ 
+With these goals in mind, IPC’s implementation should contain the following:
+  
+* **Synchronous Vs. Asynchronous**
+    Various microkernel implementations differ in whether communication is
+synchronous or asynchronous.  If we’re going to use IPC as the foundation for
+synchronization, we must ensure that communication occurs synchronously.
+However, in less time-sensitive cases, such as handing off large resources,
+blocking on send/receive can create a large performance deficit.  Our solution
+is to provide two interfaces: send\_msg/recv\_msg, which are synchronous and
+intended for sending resources (“messages”) smaller than a page, and
+send\_page/send\_recv, which can be either synchronous or asynchronous, and send
+(not share?) page-size resources.  A synchronous send blocks until it receives a
+message of
+receipt from the destination thread.  
+
+* **Destination**
+    Typically IPC has two choices in terms of where messages can be sent:
+directly to the threads themselves, which reduces indirection but requires
+threads to expose internal resources to servers, or to “mailboxes” assigned to
+threads, which provides a clean interface for sending messages to threads, but
+can be expensive when threads are added/removed.  This implementation chooses to
+use the latter, arguing that a clean interface is essential to providing a
+usable developer environment.  
+
+* **Timeout**
+  To avoid blocking forever when a thread sends a message that cannot be
+received (due to the recipient’s death or it being blocked on another expensive
+operation), send_msg should be allowed to time out and return with error.  The
+interface takes a timeout time as an argument, which can range from 0 (polls for
+recipient before returning) or infinity (blocks indefinitely).  
+
+* **Passing Resources**
+    In order to quickly exchange resources between source and destination
+threads, our implementation makes use of L4’s “Fast Path” technique for passing
+sufficiently small messages on synchronous sends, storing the message in GPRs
+for quick retrieval
+when we context switch to the waiting recipiant.  While the 32 OSOROM
+GPRs make it easy to pass around substantial amounts of information in this
+fashion, x86 does not have nearly as many.  To ensure that MorosOS remains
+performant and relatively cross-platform, the solution is to use “virtual”
+registers in x86 to fill in for the hardware registers on the other
+architecture.  This allows the interface to remain the same, despite the
+hardware differences.
+
+Not sure what we do for larger, asynchronous resources.
 
 ## Kernel Libraries ##
 A proposed breakdown of library work was the following: all functions
@@ -205,7 +257,8 @@ being used for kernel memory do not get mapped out to processes.
 Debugging facilities will also want asserts, and maybe even some
 form of outputting text to a debug console.
 
-We will also want to operations found in the standard/string library, such as memset,
+We will also want to operations found in the standard/string library, such as
+memset,
 memcpy, strlen, printf stuff
 
 ## Conversations to have with other teams ##
@@ -231,3 +284,4 @@ bootloader, and it's possible this will be a collaborative effort.
 
 Finally, it is important that all three teams discuss a security model,
 and what guarantees and assumptions each component is going to have.
+
