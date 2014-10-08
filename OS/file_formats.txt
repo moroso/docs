@@ -8,6 +8,8 @@ The Moroso BS executable format:
  * Number of bytes of data following the header
  * Size of region to map for executable
  * Base address to load the executable at
+ * First address that needs to be mapped as writable, or 0, if there
+   are no writable sections
  * Entry point address
 * Then, the actual executable data
 
