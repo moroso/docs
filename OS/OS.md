@@ -204,7 +204,7 @@ However, in less time-sensitive cases, such as handing off large resources,
 blocking on send/receive can create a large performance deficit.  Our solution
 is to provide two interfaces: send\_msg/recv\_msg, which are synchronous and
 intended for sending resources (“messages”) smaller than a page, and
-send\_page/send\_recv, which can be either synchronous or asynchronous, and send
+send\_page/recv_page, which can be either synchronous or asynchronous, and send
 (not share?) page-size resources.  A synchronous send blocks until it receives a
 message of
 receipt from the destination thread.  
