@@ -1,0 +1,1651 @@
+\documentclass[11pt,openany]{report}
+\usepackage[margin=1in]{geometry}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+\usepackage{array}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black
+}
+\usepackage{tabularx}
+\setlength{\headheight}{15.2pt}
+\pagestyle{fancy}
+\title{OSOROM Instruction Set Reference}
+\author{The Moroso Project}
+\setlength{\tabcolsep}{4pt}
+\setcounter{tocdepth}{1}
+
+\begin{document}
+\lhead{The Moroso Project}
+\chead{OSOROM Instruction Set Reference}
+\rhead{v0.1}
+\maketitle
+\tableofcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{CPU Architecture}
+
+\section{Instructions}
+Each instruction is a 32-bit word, stored in little-endian order. The top 2 bits of the instruction select a predicate register, and the third bit from the top optionally inverts it. The instruction is only executed if the resulting predicate is true.
+
+
+
+\section{Registers}
+There are 32 32-bit general-purpose registers, R0 through R31. R31 is used as the link register for BL instructions. The program counter is stored separately, and may only be modified through branch instructions and read through BL instructions. 
+
+There are three one-bit predicate registers, P0 through P2, that may be written to by compare instructions. A fourth predicate register, P3, is always true. Instructions predicated on P3 will always execute, and writes to P3 are ignored.
+
+\section{ALU Instruction Formats}
+
+ALU instructions may accept immediate values for one of their input operands, which come in two forms: Short immediates are embedded in the instruction and consist of a 10-bit constant and a 4-bit rotate amount. To achieve any even rotation between 0 and 30, the rotate amount is first multiplied by 2, and the constant is rotated right by the result. ALU instructions that accept a single operand use the portion of the instruction normally used for the other operand register to extend the constant to 15 bits. Long immediate operands are 32 bit values, and occupy the memory word following the instruction.
+
+If a register is used as the last source operand of an ALU instruction, it may optionally be shifted by a 5-bit immediate value, as specified with the \texttt{SHF} and \texttt{SHIFTAMT} fields of the instruction. The \texttt{SHIFTAMT} field is the amount to shift, between 0 and 31, and the \texttt{SHF} field specifies the shift type, as follows:
+
+\begin{table}[!h]
+\centering
+\begin{tabular}{l|l|l}
+Encoding & Mnemonic & Shift Type\\
+\hline
+0 0 & \texttt{LSL} & Logical Shift Left \\ 
+0 1 & \texttt{LSR} & Logical Shift Right \\ 
+1 0 & \texttt{ASR} & Arithmetic Shift Right \\ 
+1 1 & \texttt{ROR} & Rotate Right
+\end{tabular}
+\end{table}
+
+ALU instructions taking a single operand may also specify a register shifted by an unsigned value contained in another register \texttt{Rt}. In this case, the same \texttt{SHF} types are available. If the value of the shift register is greater than 31, the following behavior is used: Logical shifts zero the result, arithmetic right shift extends the sign bit of the operand register across the entire result, and rotate rotates the value by \texttt{Rt \% 32}.
+
+\section{VLIW}
+At each time step, the CPU fetches a ``packet'' of 4 instructions located contiguously in memory and executes them in parallel. These packets must be aligned to their 16-byte size, and branch targets must also be so aligned.
+
+There are three types of instructions: Control, Memory, and ALU instructions. Only one control instruction may be executed in any given packet; it must occupy the first (lowest-address) slot in its packet. Likewise, only the first two slots in a packet may execute memory instructions. ALU instructions may be located in any slot.
+
+If a long immediate operand is specified for an ALU instruction, the following slot is interpreted as an operand and no operation is issued for that slot. The final slot in a packet may not specify a long immediate operand.
+
+
+\section{Virtual Memory}
+Virtual memory is accomplished through a hardware-filled TLB, with 4KB pages and a 2-level page-table structure. Page directories and page tables are one page in size, containing 1024 32-bit entries. Virtual addresses are 32 bits and are broken up into 3 parts: Page Directory Index, Page Table Index, and Page Offset, as follows:
+
+\begin{table}[!h]
+\centering
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & & & & & & & & & 2 & 2 & & & & & & & & & 1 & 1 & & & & & & & & & & &\\
+	1 & & & & & & & & & 2 & 1 & & & & & & & & & 2 & 1 & & & & & & & & & & & 0\\
+	\hline
+	\multicolumn{10}{|c}{PD INDEX} & \multicolumn{10}{|c|}{PT INDEX} & \multicolumn{12}{c|}{OFFSET}\\
+	\hline
+\end{tabular}
+}
+\end{table}
+
+The page directory base is stored in a coprocessor register, \texttt{PTBR}. Writes to this register will flush all entries not marked global from the TLB.
+Page table entries and page directory entries are each 32 bits and have the same format:
+
+\begin{table}[!h]
+\centering
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & & 2 & 2 & & & & & & & & & & & & & & & & 1 & 1 & & & & & & & & & & &\\
+	1 & & 9 & 8 & & & & & & & & & & & & & & & & 2 & 1 & & & & & & & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c}{RSV} & \multicolumn{17}{|c|}{PHYSICAL PAGE BASE} & \multicolumn{8}{c|}{UNUSED} & G & \multicolumn{1}{|c|}{K} & W & \multicolumn{1}{|c|}{P}\\
+	\hline
+\end{tabular}
+}
+\end{table}
+
+The four flags in each entry have the following meanings:
+
+\begin{itemize}
+  \item \texttt{G}: Global page. Mappings with this bit set in either level will not be flushed from the TLB when the page table base register is modified.
+  \item \texttt{K}: Kernel-only page. Mappings with this bit set in either level may only be read or written to while the processor is in kernel mode. Attempting to access such mappings from user mode will generate a page fault exception.
+  \item \texttt{W}: Writeable page. Attempting to write to a page without this bit set in both levels will result in a page fault.
+  \item \texttt{P}: Present. Attempting to access a page without this bit set in both levels will result in a page fault.
+\end{itemize}
+
+Since our FPGA has 512MB of physical memory, physical page bases are 17 bits, and offsets are 12 bits. The top bits of an entry are not used but should remain 0 in case we go to 32-bit physical addresses in the future. Bits 11 through 4 are free for programmer use.
+
+\section{Coprocessor Registers}
+\label{sec:cpregs}
+
+The coprocessor registers are control registers accessible only in kernel mode via the MFC and MTC instructions. They provide information about exceptions to the kernel and are used to configure the processor. 
+
+\subsection{List of Coprocessor Registers}
+
+\begin{table}[!h]
+\centering
+\begin{tabularx}{\textwidth}{l|l|X}
+Encoding & Mnemonic & Purpose\\
+\hline
+\texttt{00000} & PFLAGS & Processor control flags. See below.\\
+\texttt{00001} & PTB & Page Table Base Register. Specifies the start of the page directory for virtual address translation. Writes to this register flush the TLB.\\
+\texttt{00010} & EHA & Exception Handler Address. Specifies a virtual address to which to transfer control when an exception or interrupt is encountered.\\
+\texttt{00011} & EPC & Error PC. The virtual address of the last instruction packet to cause an exception, or the first instruction not executed due to an interrupt.  LSBs contain system state when the exception occurred. \\
+\texttt{00100} & EC0 & Error Cause 0. The cause of an exception occurring on lane 0, or the type of a received interrupt. See Section~\ref{sec:exns} for a list of causes.\\
+\texttt{00101} & EC1 & Error Cause 1. The cause of an exception occurring on lane 1.\\
+\texttt{00110} & EC2 & Error Cause 2. The cause of an exception occurring on lane 2.\\
+\texttt{00111} & EC3 & Error Cause 3. The cause of an exception occurring on lane 3.\\
+\texttt{01000} & EA0 & Error Address 0. If lane 0 makes an invalid memory access, the virtual address it attempted to access will be stored in this register.\\
+\texttt{01001} & EA1 & Error Address 1. If lane 1 makes an invalid memory access, the virtual address it attempted to access will be stored in this register.\\
+\texttt{10000} & SP0 & Scratchpad register for system software usage.\\
+\texttt{10001} & SP1 & Scratchpad register for system software usage.\\
+\texttt{10010} & SP2 & Scratchpad register for system software usage.\\
+\texttt{10011} & SP3 & Scratchpad register for system software usage.
+\end{tabularx}
+\end{table}
+
+\subsection{The PFLAGS Register}
+
+At present, the PFLAGS register contains 2 flags: Bit 0 is 1 if interrupts are enabled, and bit 1 is 1 if paging is enabled. More control flags may be added here if needed.
+
+\subsection{The EPC Register}
+
+\begin{table}[!h]
+\centering
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & & & & & & & & & & & & & & & & & & & & & & & & & & & & & & &\\
+	1 & & & & & & & & & & & & & & & & & & & & & & & & & & & 4 & & & 1 & 0\\
+	\hline
+	\multicolumn{28}{|c|}{PC} & \multicolumn{2}{c}{RESV} & \multicolumn{1}{|c|}{IF} & \multicolumn{1}{c|}{M}\\
+	\hline
+\end{tabular}
+}
+\end{table}
+
+The \texttt{EPC} register's MSBs contain the PC at which an exception
+occurred.  (If an instruction fetch failed because of a paging exception,
+\texttt{EPC[PC]} contains the PC for which the fetch attempt failed.) The
+\texttt{M} field contains the system mode at the time that the exception
+occurred: if \texttt{EPC[M]} is set, then the system was in kernel mode at
+the time, and otherwise, the system was in user mode.  The \texttt{EPC[IF]}
+field contains the interrupt flag from \texttt{PFLAGS} at the time; if it is
+set, then interrupts were enabled, and if it is clear, than interrupts were
+disabled.
+
+\subsection{Scratchpad registers}
+
+Scratchpad registers are provided for the convenience of system software,
+should it wish to save and restore user registers (or other data) without
+reserving user-architectural registers for that purpose.  Their value is
+defined not to affect system state other than through reads and writes.
+
+\section{Exceptions and Interrupts}
+\label{sec:exns}
+
+Exceptions and interrupts cause the processor to enter kernel mode and transfer control to the virtual address specified in the EHA register. 
+If an interrupt occurs, the code corresponding to that interrupt will be written into the EC0 register. If one or more instructions in a packet cause exceptions, a code corresponding to the exception type will be written into the EC register corresponding to that instruction's location in the packet. If an instruction on lane 0 or 1 attempts to access an invalid memory address, the address will be written into the EA register for that lane. In all cases, the virtual address of the program counter where the exception occurred is written into the EPC register. For exceptions, this is the address of the instruction packet that caused the exception. For interrupts, this is the address of the first instruction packet not executed due to the interrupt. In all cases, interrupts are disabled. This is necessary in order to ensure the kernel can save the coprocessor registers before they are overwritten by another interrupt.
+
+\subsection{Error Code Format}
+
+\begin{table}[!h]
+\centering
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & & & & & & & & & & & & & & & & & & & & & & & & & & & & & & &\\
+	1 & & & & & & & & & & & & & & & & & & & & & & & & 7 & 6 & 5 & 4 & & & & 0\\
+	\hline
+	\multicolumn{25}{|c|}{RESERVED} & \multicolumn{2}{c}{INT} & \multicolumn{5}{|c|}{EXNTYPE} \\
+	\hline
+\end{tabular}
+}
+\end{table}
+
+\begin{itemize}
+  \item \texttt{EXNTYPE} corresponds to a value in Table~\ref{tab:exncodes} and indicates the type of exception that occurred.
+  \item If \texttt{EXNTYPE} indicates that an interrupt occurred, \texttt{INT} will correspond to a value in Table~\ref{tab:intcodes} and signify the type of interrupt.
+\end{itemize}
+
+\begin{table}[!h]
+\begin{tabular}{l|l}
+Error Code & Type\\
+\hline
+\texttt{00000} & No Error\\
+\texttt{00001} & Page Fault on Instruction Fetch\\
+\texttt{00010} & Illegal Instruction\\
+\texttt{00011} & Duplicate Destination\\
+\texttt{00100} & Page Fault on Data Access\\
+\texttt{00101} & Invalid Physical Address\\
+\texttt{00110} & Divide by Zero (TODO are we doing other arithmetic exceptions??)\\
+\texttt{00111} & Interrupt\\
+\texttt{01000} & SYSCALL\\
+\texttt{01001} & BREAK
+\end{tabular}
+\caption{Exception Codes}
+\label{tab:exncodes}
+\end{table}
+
+\begin{table}[!h]
+\begin{tabular}{l|l}
+Interrupt Code & Type\\
+\hline
+\texttt{00} & Timer\\
+\texttt{01} & USB\\
+\texttt{10} & Framebuffer\\
+\texttt{11} & SD Card
+\end{tabular}
+\caption{Interrupt Codes}
+\label{tab:intcodes}
+\end{table}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Instruction Set Summary}
+
+\section{Instruction Set Encoding}
+
+\begin{table}[!h]
+\centering
+\scalebox{0.65}{
+\renewcommand{\tabcolsep}{0.175cm}
+\renewcommand{\arraystretch}{2.15}
+\begin{tabular}{rccccccccccccccccccccccccccccccccl}
+	& 31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 & 15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & \\
+	\cline{2-33}
+	ALU 1-Op Short \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 0 & \multicolumn{10}{|c}{Immediate Low 10} & \multicolumn{4}{|c|}{Rotate} & \multicolumn{4}{c}{ALU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Imm High 5} & \\
+	\cline{2-33}
+	ALU 2-Op Short \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 0 & \multicolumn{10}{|c}{Immediate 10} & \multicolumn{4}{|c|}{Rotate} & \multicolumn{4}{c}{ALU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Rs} & \\
+	\cline{2-33}
+	Compare Short \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 0 & \multicolumn{10}{|c}{Immediate 10} & \multicolumn{4}{|c|}{Rotate} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c}{Ctype} & \multicolumn{2}{|c}{Pd} & \multicolumn{5}{|c|}{Rs} & \\
+	\cline{2-33}
+	ALU 1-Op Register \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 1 & \multicolumn{5}{|c}{Shift amount} & \multicolumn{2}{|c}{Stype} & \multicolumn{5}{|c|}{Rt} & \multicolumn{4}{c}{ALU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & \\
+	\cline{2-33}
+	ALU 2-Op Register \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 1 & \multicolumn{5}{|c}{Shift amount} & \multicolumn{2}{|c}{Stype} & \multicolumn{5}{|c|}{Rt} & \multicolumn{4}{c}{ALU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Rs} & \\
+	\cline{2-33}
+	Compare Register \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 1 & \multicolumn{5}{|c}{Shift amount} & \multicolumn{2}{|c}{Stype} & \multicolumn{5}{|c|}{Rt} & 0 & 1 & 1 & 1 & \multicolumn{3}{|c}{Ctype} & \multicolumn{2}{|c}{Pd} & \multicolumn{5}{|c|}{Rs} & \\
+	\cline{2-33}
+	Load \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c}{Offset 12} & \multicolumn{3}{|c}{LSU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Rs} & \\
+	\cline{2-33}
+	Store \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 0 & 1 & \multicolumn{6}{|c}{Offset High 6} & \multicolumn{5}{|c|}{Rt} & M & \multicolumn{3}{|c}{LSU Opcode} & \multicolumn{5}{|c}{Offset Low 5} & \multicolumn{5}{|c|}{Rs} & \\
+	\cline{2-33}
+	Branch immediate \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 1 & 0 & \multicolumn{1}{|c}{L} & \multicolumn{25}{|c|}{Offset 25} & \\
+	\cline{2-33}
+	Branch register \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 1 & 1 & \multicolumn{1}{|c}{L} & \multicolumn{20}{|c}{Offset 20} & \multicolumn{5}{|c|}{Rs} & \\
+	\cline{2-33}
+	Control \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{Ctrl Opcode High} & \multicolumn{5}{|c}{Rt} & \multicolumn{4}{|c}{Ctrl Opcode Low} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Rs} & \\
+	\cline{2-33}
+	ALU 1-Op Regsh \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c}{Stype} & \multicolumn{5}{|c}{Rt} & \multicolumn{4}{|c}{ALU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Rs} & \\
+	\cline{2-34}
+	ALU Long \hspace{2pt} & \multicolumn{3}{|c|}{Pred} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{4}{|c}{ALU Opcode} & \multicolumn{5}{|c}{Rd} & \multicolumn{5}{|c|}{Rs} & \multicolumn{1}{c|}{Imm 32} \\
+	\cline{2-34}
+	& 31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 & 15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & \\
+\end{tabular}}
+\end{table}
+
+\pagebreak
+\section{ALU Opcodes}
+
+\begin{table}[!h]
+\centering
+\scalebox{0.9}{
+\renewcommand{\arraystretch}{1.125}
+\begin{tabular}{l|l|l|l|l}
+	Encoding & Mnemonic & Instruction & Action & Section(s) \\
+	\hline
+	0 0 0 0 & \texttt{ADD}     & Addition              & \texttt{Rd := Rs + Op2}                   & ~\ref{sec:addinst} \\
+	0 0 0 1 & \texttt{AND}     & Bitwise And           & \texttt{Rd := Rs \& Op2}                  & ~\ref{sec:andinst} \\
+	0 0 1 0 & \texttt{NOR}     & Bitwise Logical NOR   & \texttt{Rd := \textasciitilde (Rs | Op2)} & ~\ref{sec:norinst} \\
+	0 0 1 1 & \texttt{OR}      & Bitwise Logical OR    & \texttt{Rd := Rs | Op2}                   & ~\ref{sec:orinst} \\
+	0 1 0 0 & \texttt{SUB}     & Subtraction           & \texttt{Rd := Rs - Op2}                   & ~\ref{sec:subinst} \\
+	0 1 0 1 & \texttt{RSB}     & Reverse Subtraction   & \texttt{Rd := Op2 - Rs}                   & ~\ref{sec:rsbinst} \\
+	0 1 1 0 & \texttt{XOR}     & Bitwise Exclusive OR  & \texttt{Rd := Rs $\hat{}$ Op2}            & ~\ref{sec:xorinst} \\
+	0 1 1 1 & \texttt{COMPARE} & Compare Instructions  & \texttt{Pd := Rs CMP Op2}                 & ~\ref{sec:cmpbcinst}, ~\ref{sec:cmpbsinst}, ~\ref{sec:cmpeqinst}, ~\ref{sec:cmplesinst}, ~\ref{sec:cmpleuinst}, ~\ref{sec:cmpltsinst}, ~\ref{sec:cmpltuinst} \\
+	1 0 0 0 & \texttt{MOV}     & Move                  & \texttt{Rd := Op2}                        & ~\ref{sec:movinst} \\
+	1 0 0 1 & \texttt{MVN}     & Move and Invert       & \texttt{Rd := \textasciitilde Op2}        & ~\ref{sec:mvninst} \\
+	1 0 1 0 & \texttt{SXB}     & Sign-Extend Byte      & \texttt{Rd := SX Op2[7:0]}                & ~\ref{sec:sxbinst} \\
+	1 0 1 1 & \texttt{SXH}     & Sign-Extend Half-Word & \texttt{Rd := SX Op2[15:0]}               & ~\ref{sec:sxhinst} \\
+	1 1 0 0 & reserved         & n/a                   & n/a & n/a \\
+	1 1 0 1 & reserved         & n/a                   & n/a & n/a \\
+	1 1 1 0 & reserved         & n/a                   & n/a & n/a \\
+	1 1 1 1 & reserved         & n/a                   & n/a & n/a \\
+\end{tabular}}
+\end{table}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Instruction Listing}
+
+\pagebreak
+\section{ADD - Addition}
+\label{sec:addinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- Rs + Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs + Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs + (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+ADD is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Adds the two operands together into the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the addition is performed.
+
+TODO optional overflow exceptions???
+
+\pagebreak
+\section{AND - Bitwise And}
+\label{sec:andinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- Rs & Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs & Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs & (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+AND is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Computes the bitwise logical AND of the two operands, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
+
+\pagebreak
+\section{B - Branch}
+\label{sec:binst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 1 & 0 & 0 & \multicolumn{25}{|c|}{OFFSET}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 1 & 1 & 0 & \multicolumn{20}{|c|}{OFFSET} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] B <label>@
+  \item \verb@[[!]Pn ->] B Rs + OFF@
+\end{itemize}
+
+\subsection{Type}
+Branch is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+Transfers control to the address specified. The \texttt{OFFSET} field is shifted left by 4 places and sign-extended to 32 bits, then added to either the source register or, if none is specified, the address of the branch instruction. If the specified base register is not aligned to a 16-byte value, the target is rounded down to the nearest aligned value before control is transferred. Other instructions in the same packet as the branch instruction are executed before control is transferred.
+
+
+\pagebreak
+\section{BL - Branch with Link}
+\label{sec:blinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 1 & 0 & 1 & \multicolumn{25}{|c|}{OFFSET}\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 1 & 1 & 1 & \multicolumn{20}{|c|}{OFFSET} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] BL <label>@
+  \item \verb@[[!]Pn ->] BL Rs + OFF@
+\end{itemize}
+
+\subsection{Type}
+Branch with Link is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+BL functions identically to the Branch instruction, except that the address of the BL instruction is placed in R31.
+
+\pagebreak
+\section{BREAK}
+\label{sec:breakinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 0 & 0 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & \multicolumn{1}{c|}{X} \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] BREAK@
+  \item \verb@[[!]Pn ->] BREAK Imm@
+\end{itemize}
+
+\subsection{Behavior}
+Equivalent to SYSCALL, except that the exception code stored in EC0 is different - See Section~\ref{sec:exns}.
+
+\pagebreak
+\section{CMPBC - Compare Bits Clear}
+\label{sec:cmpbcinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Pd <- Rs BC Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs BC (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+CMPBC is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPBC checks each bit of Rs corresponding to a 1 bit in the second operand, writing 1 into the destination predicate if all such bits are 0, and writing 0 otherwise -- that is, it computes the unary OR of the bits in \verb!(~Rs & OP2)! and stores the result in the desired predicate.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+\pagebreak
+\section{CMPBS - Compare Bits Set}
+\label{sec:cmpbsinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Pd <- Rs BS Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs & Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs BS (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs & (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+CMPBS is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPBS checks each bit of Rs corresponding to a 1 bit in the second operand, writing 1 into the destination predicate if any such bit is 1, and writing 0 otherwise  -- that is, it computes the unary OR of the bits in \verb!(Rs & OP2)! and stores the result in the desired predicate.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+\pagebreak
+\section{CMPEQ - Compare Equal}
+\label{sec:cmpeqinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 1 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Pd <- Rs == Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs == (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+CMPEQ is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPEQ tests whether its two operands are equal, writing 1 into the destination predicate if they are and 0 otherwise.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+
+\pagebreak
+\section{CMPLES - Compare Less Than or Equal (Signed)}
+\label{sec:cmplesinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Pd <- Rs LES Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs <=s Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs LES (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs <=s (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+CMPLES is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPLES interprets its operands as 32-bit two's-complement signed integers, and writes 1 into the specified predicate register if the value of \texttt{Rs} is less than or equal to the value of the second operand, and 0 otherwise.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+
+\pagebreak
+\section{CMPLEU - Compare Less Than or Equal (Unsigned)}
+\label{sec:cmpleuinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 1 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Pd <- Rs LEU Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs <= Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs <=u Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs LEU (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs <= (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs <=u (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+CMPLEU is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPLEU interprets its operands as 32-bit unsigned integers, and writes 1 into the specified predicate register if the value of \texttt{Rs} is less than or equal to the value of the second operand, and 0 otherwise.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+
+\pagebreak
+\section{CMPLTS - Compare Less Than (Signed)}
+\label{sec:cmpltsinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{1} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Pd <- Rs LTS Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs <s Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs LTS (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs <s (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+CMPLTS is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPLTS interprets its operands as 32-bit two's-complement signed integers, and writes 1 into the specified predicate register if the value of \texttt{Rs} is less than to the value of the second operand, and 0 otherwise.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+
+\pagebreak
+\section{CMPLTU - Compare Less Than (Unsigned)}
+\label{sec:cmpltuinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{0} & 0 & 0 & \multicolumn{2}{|c}{PD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Pd <- Rs LTU Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs < Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs <u Imm@
+  \item \verb@[[!]Pn ->] Pd <- Rs LTU (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs < (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Pd <- Rs <u (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+CMPLTU is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+CMPLTU interprets its operands as 32-bit unsigned integers, and writes 1 into the specified predicate register if the value of \texttt{Rs} is less than to the value of the second operand, and 0 otherwise.
+
+\noindent
+P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
+
+
+
+\pagebreak
+\section{DIV - Integer Division}
+\label{sec:divinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 0 & 1 & \multicolumn{1}{|c}{X} & \multicolumn{5}{|c|}{RT} & X & X & X & X & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS} \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- Rs / Rt@ (defaults to unsigned)
+  \item \verb@[[!]Pn ->] Rd <- Rs /s Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs /u Rt@
+\end{itemize}
+
+\subsection{Type}
+
+DIV is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+
+Performs the integer division \texttt{Rs / Rt}, writing the quotient into \texttt{Rd} and the remainder into the multiply/divide overflow register.
+
+
+\pagebreak
+\section{ERET - Return from Exception}
+\label{sec:eretinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 0 & 0 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & \multicolumn{1}{c|}{X} \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] ERET@
+\end{itemize}
+
+\subsection{Type}
+
+ERET is a Control operation. It may only be placed as the first instruction in a packet. It may only be used when the processor is in kernel mode.
+
+\subsection{Behavior}
+ERET returns the processor to the state specified by the \texttt{EPC} coprocessor register.  Specifically, the program counter takes on the value from \texttt{EPC[PC]}, the system mode flag takes on the value from \texttt{EPC[M]} (kernel mode if \texttt{M} is 1, otherwise user mode), and the interrupt enable flag takes on the value from \texttt{EPC[IF]} (interrupts enabled if \texttt{IF} is 1, otherwise disabled).  Other instructions in the same packet as the ERET instruction are executed in kernel mode before control is transferred.  This instruction also clears the memory link bit. 
+
+
+\pagebreak
+\section{FENCE}
+\label{sec:fenceinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 0 & 1 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & \multicolumn{1}{c|}{X} \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+\begin{itemize}
+  \item \verb@[[!]Pn ->] FENCE@
+\end{itemize}
+
+\subsection{Type}
+FENCE is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+Our architecture doesn't reorder requests, so right now FENCE is a no-op. If we have to add behavior to it in the future, memory instructions in the same packet as the FENCE will probably go after it, but please don't count on that right now.
+
+\pagebreak
+\section{FLUSH - Flush L1 Caches}
+\label{sec:flushinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 0 & 1 & \multicolumn{1}{|c|}{C} & X & X & X & X & X & X & X & \multicolumn{2}{|c|}{TYPE} & X & X & X & X & X & \multicolumn{5}{|c|}{RS} \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] FLUSH.<TYPE> Rs@
+\end{itemize}
+
+\subsection{Type}
+
+FLUSH is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+
+FLUSH invalidates the line in the specified L1 cache corresponding to the virtual address contained in \texttt{Rs}. For instruction or data cache flushes, attempting to flush a virtual address whose
+access would cause a page fault will also cause a page fault. If a dirty data cache line is flushed, the new value is immediately written out to the L2 cache, where it will be visible to DMA peripherals.
+
+\noindent
+Values for the \texttt{TYPE} field are as follows:
+
+\begin{table}[!h]
+\centering
+\begin{tabular}{l|l|l}
+  Value & Mnemonic & Type\\
+  \hline
+  0 0 & \texttt{DATA} & L1 Data Cache\\
+  0 1 & \texttt{INST} & L1 Instruction Cache\\
+  1 0 & \texttt{DTLB} & Data TLB\\
+  1 1 & \texttt{ITLB} & Instruction TLB
+\end{tabular}
+\end{table}
+
+
+\pagebreak
+\section{LB - Load Byte}
+\label{sec:lbinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 0 & 0 & 0 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- *b(Rs [+ OFFSET])@
+\end{itemize}
+
+\subsection{Type}
+LB is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+LB loads a byte from the specified address into \texttt{Rd}. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. The high 24 bits of \texttt{Rd} are zeroed.
+
+
+\pagebreak
+\section{LH - Load Half-Word}
+\label{sec:lhinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 0 & 0 & 1 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- *h(Rs [+ OFFSET])@
+\end{itemize}
+
+\subsection{Type}
+LH is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+LH loads two bytes from the specified address into \texttt{Rd}. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. Only 2-byte aligned addresses may be accessed - the low bit of the address is ignored. The high 16 bits of \texttt{Rd} are zeroed.
+
+
+\pagebreak
+\section{LL - Load Linked}
+\label{sec:llinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 0 & 1 & 1 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- *ll(Rs [+ OFFSET])@
+\end{itemize}
+
+\subsection{Type}
+LL is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+LL loads a word from the specified address into \texttt{Rd}. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. Only 4-byte aligned addresses may be accessed - the low 2 bits of the address are ignored.
+
+\noindent
+Additionally, LL sets the link bit. A future SC operation will only complete if no interrupt, exception, or ERET clears the link bit in the intervening period.
+
+
+\pagebreak
+\section{LW - Load Word}
+\label{sec:lwinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{12}{|c|}{OFFSET} & 0 & 1 & 0 & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- *l(Rs [+ OFFSET])@
+  \item \verb@[[!]Pn ->] Rd <- *w(Rs [+ OFFSET])@
+\end{itemize}
+
+\subsection{Type}
+LW is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+LW loads a word from the specified address into \texttt{Rd}. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. Only 4-byte aligned addresses may be accessed - the low 2 bits of the address are ignored.
+
+
+\pagebreak
+\section{MFC - Move From Coprocessor Register}
+\label{sec:mfcinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 1 & 0 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{CPRS} \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- CPRs@
+\end{itemize}
+
+\subsection{Type}
+MFC is a Control operation. It may only be placed as the first instruction in a packet. It may only be used when the processor is in kernel mode.
+
+\subsection{Behavior}
+MFC moves the contents of the specfied coprocessor register into the specified general-purpose register. See Section~\ref{sec:cpregs}for a description of the available coprocessor registers and their mnemonics.
+
+
+\pagebreak
+\section{MFHI - Move From Multiply/Division Overflow Register}
+\label{sec:mfhiinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 1 & 0 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & \multicolumn{5}{|c|}{RD} & X & X & X & X & \multicolumn{1}{c|}{X}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- OVF@
+\end{itemize}
+
+\subsection{Type}
+MFHI is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+MFHI moves the contents of the multiply/division overflow register into the specified general-purpose register. This register stores the high bits of results of multiplication operations, or the remainders generated by division operations.
+
+\pagebreak
+\section{MOV - Move}
+\label{sec:movinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rt@
+  \item \verb@[[!]Pn ->] Rd <- (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rt SHF Rs@
+\end{itemize}
+
+\subsection{Type}
+MOV is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+MOV moves the value of its source operand into the specified destination register. If the second operand is a register, it may be shifted by an immediate value or by the contents of a register before being stored.
+
+\pagebreak
+\section{MTC - Move To Coprocessor Register}
+\label{sec:mtcinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 1 & 1 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & \multicolumn{5}{|c|}{CPRD} & \multicolumn{5}{c|}{RS} \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] CPRd <- Rs@
+\end{itemize}
+
+\subsection{Type}
+MTC is a Control operation. It may only be placed as the first instruction in a packet. It may only be used when the processor is in kernel mode.
+
+\subsection{Behavior}
+MTC moves the contents of the selected general-purpose register into the specified coprocessor register. See Section~\ref{sec:cpregs} for a description of the available coprocessor registers and their mnemonics.
+
+
+\pagebreak
+\section{MTHI - Move To Multiply/Division Overflow Register}
+\label{sec:mthiinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 1 & 1 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X& X & \multicolumn{5}{|c|}{RS} \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] OVF <- Rs@
+\end{itemize}
+
+\subsection{Type}
+MTHI is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+MTHI moves the value of the specified general-purpose register into the multiply/division overflow register.
+
+\pagebreak
+\section{MVN - Move and Invert}
+\label{sec:mvninst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- ~Imm@
+  \item \verb@[[!]Pn ->] Rd <- ~Rt@
+  \item \verb@[[!]Pn ->] Rd <- ~(Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- ~(Rt SHF Rs)@
+\end{itemize}
+
+\subsection{Type}
+MVN is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+MVN takes the bitwise complement of its source operand, storing the result in the specified destination register. If the second operand is a register, it may be shifted by an immediate value or by the contents of a register before being inverted and stored.
+
+
+\pagebreak
+\section{MULT - Integer Multiplication}
+\label{sec:multinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 0 & 0 & \multicolumn{1}{|c}{S} & \multicolumn{5}{|c|}{RT} & X & X & X & X & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS} \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- Rs * Rt@ (defaults to unsigned)
+  \item \verb@[[!]Pn ->] Rd <- Rs *s Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs *u Rt@
+\end{itemize}
+
+\subsection{Type}
+MULT is a Control operation. It may only be placed as the first instruction in a packet.
+
+\subsection{Behavior}
+MULT performs an integer multiplication on its two register operands. If the S bit is set, the operands are interpreted as two's complement signed integers; otherwise they are interpreted as unsigned. The low 32 bits of the 64 bit result are placed in the specified destination register, and the high 32 bits are placed in the special-purpose multiply/division overflow register, where they are accessible via the MFHI instruction.
+
+
+\pagebreak
+\section{NOR - Bitwise Logical NOR}
+\label{sec:norinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- Rs ~| Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs NOR Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs ~| Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs NOR Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs ~| (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rs NOR (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+NOR is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Computes the bitwise logical NOR of the two operands, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
+
+
+\pagebreak
+\section{OR - Bitwise Logical OR}
+\label{sec:orinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- Rs | Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs OR Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs | Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs OR Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs | (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rs OR (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+OR is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Computes the bitwise logical OR of the two operands, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
+
+
+\pagebreak
+\section{RSB - Reverse Subtraction}
+\label{sec:rsbinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- Rs -: Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs RSB Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs -: Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs RSB Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs -: (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rs RSB (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+RSB is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Subtracts the value stored in RS from the value of the second operand, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
+
+
+\pagebreak
+\section{SB - Store Byte}
+\label{sec:sbinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{6}{|c|}{OFFSETHIGH} & \multicolumn{5}{c}{RT} & \multicolumn{1}{|c|}{M} & 1 & 0 & 0 & \multicolumn{5}{|c|}{OFFSETLOW} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] *b(Rs [+ OFFSET]) <- Rt@
+\end{itemize}
+
+\subsection{Type}
+SB is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+SB stores the low byte of \texttt{Rt} at the provided address. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. 
+
+\noindent
+The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:19], inst[13], inst[9:5]}#.
+
+
+\pagebreak
+\section{SC - Store Conditional}
+\label{sec:scinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{6}{|c|}{OFFSETHIGH} & \multicolumn{5}{c}{RT} & \multicolumn{1}{|c|}{M} & 1 & 1 & 1 & \multicolumn{5}{|c|}{OFFSETLOW} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] *sc(Rs [+ OFFSET]) <- Rt@
+\end{itemize}
+
+\subsection{Type}
+SC is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+SC stores the value in \texttt{Rt} at the provided address, if the processor's link bit is set. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. Only 4-byte aligned addresses may be accessed - the low 2 bits of the address are ignored.
+
+The link bit is set by executing the LL instruction, and is cleared by the SC or ERET instructions, or any time an exception or interrupt is dispatched. SC only completes if the link bit is set when it is executed - thus, if it completes, all instructions since the last LL instruction are known to have been executed atomically. The SC instruction writes a 1 into predicate register 0 if the store completes successfully, or a 0 if it fails.
+
+The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:19], inst[13], inst[9:5]}#.
+
+
+
+
+\pagebreak
+\section{SH - Store Half-Word}
+\label{sec:shinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{6}{|c|}{OFFSETHIGH} & \multicolumn{5}{c}{RT} & \multicolumn{1}{|c|}{M} & 1 & 0 & 1 & \multicolumn{5}{|c|}{OFFSETLOW} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] *h(Rs [+ OFFSET]) <- Rt@
+\end{itemize}
+
+\subsection{Type}
+SH is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+SH stores the low two bytes of \texttt{Rt} at the provided address. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. The address must be aligned to a multiple of 2; the low bit of the address is ignored.
+
+\noindent
+The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:19], inst[13], inst[9:5]}#.
+
+
+\pagebreak
+\section{SUB - Subtraction}
+\label{sec:subinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 0 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- Rs - Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs SUB Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs - Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs SUB Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs - (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rs SUB (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+SUB is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Subtracts the value of the second operand from the value in \texttt{Rs}, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
+
+
+\pagebreak
+\section{SW - Store Word}
+\label{sec:swinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 1 & \multicolumn{6}{|c|}{OFFSETHIGH} & \multicolumn{5}{c}{RT} & \multicolumn{1}{|c|}{M} & 1 & 1 & 0 & \multicolumn{5}{|c|}{OFFSETLOW} & \multicolumn{5}{c|}{RS}\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] *l(Rs [+ OFFSET]) <- Rt@
+  \item \verb@[[!]Pn ->] *w(Rs [+ OFFSET]) <- Rt@
+\end{itemize}
+
+\subsection{Type}
+SW is a Memory operation. It may only be placed in the first or second slot in an instruction packet.
+
+\subsection{Behavior}
+SW stores the contents of \texttt{Rt} at the provided address. The address is computed by sign-extending the \texttt{OFFSET} field to 32 bits and adding it to the value of \texttt{Rs}. The address must be aligned to a multiple of 4; the low two bits of the address are ignored.
+
+\noindent
+The \texttt{OFFSET} field for stores is broken up into 3 parts: \verb#{inst[24:19], inst[13], inst[9:5]}#.
+
+
+\pagebreak
+\section{SXB - Sign-Extend Byte}
+\label{sec:sxbinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- SXB Imm@
+  \item \verb@[[!]Pn ->] Rd <- SXB Rt@
+  \item \verb@[[!]Pn ->] Rd <- SXB (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- SXB (Rt SHF Rs)@
+\end{itemize}
+
+\subsection{Type}
+SXB is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+SXB moves the low byte of its source operand into the specified destination register, sign-extending it across the rest of the register. If the second operand is a register, it may be shifted by an immediate value or by the contents of a register before being stored.
+
+
+\pagebreak
+\section{SXH - Sign-Extend Half-Word}
+\label{sec:sxhinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTLOW} & \multicolumn{4}{|c|}{ROTATE} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{CONSTHI} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 1 & \multicolumn{2}{|c|}{SHF} & \multicolumn{5}{c|}{RT} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 1 & 0 & 1 & 1 & \multicolumn{5}{|c}{RD} & \multicolumn{1}{|c}{X} & X & X & X & \multicolumn{1}{c|}{X} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- SXH Imm@
+  \item \verb@[[!]Pn ->] Rd <- SXH Rt@
+  \item \verb@[[!]Pn ->] Rd <- SXH (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- SXH (Rt SHF Rs)@
+\end{itemize}
+
+\subsection{Type}
+SXH is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+SXH moves the low two bytes of its source operand into the specified destination register, sign-extending it across the rest of the register. If the second operand is a register, it may be shifted by an immediate value or by the contents of a register before being stored.
+
+
+\pagebreak
+\section{SYSCALL - System Call Exception}
+\label{sec:syscallinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{cccccccccccccccccccccccccccccccc}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 0 & 0 & 1 & 0 & \multicolumn{1}{|c}{X} & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & X & \multicolumn{1}{c|}{X} \\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] SYSCALL@
+  \item \verb@[[!]Pn ->] SYSCALL Imm@
+\end{itemize}
+
+\subsection{Behavior}
+
+SYSCALL causes an exception to occur on the instruction packet of which it is a part. Its corresponding error code is placed in the EC0 coprocessor register - see Section~\ref{sec:exns} for details.
+Note that this causes other instructions in the packet to be canceled.
+
+\pagebreak
+\section{XOR - Bitwise Exclusive OR}
+\label{sec:xorinst}
+
+\subsection{Encoding}
+
+\texttt{%
+\begin{tabular}{ccccccccccccccccccccccccccccccccl}
+	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & &\\
+	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & \\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 0 & \multicolumn{10}{|c}{CONSTANT} & \multicolumn{4}{|c|}{ROTATE} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} &\\
+	\cline{1-32}
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 1 & \multicolumn{5}{|c}{SHIFTAMT} & \multicolumn{2}{|c}{SHF} & \multicolumn{5}{|c|}{RT} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & \\
+	\hline
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 & \multicolumn{1}{c|}{0} & 0 & 1 & 1 & 0 & \multicolumn{5}{|c}{RD} & \multicolumn{5}{|c|}{RS} & LONG\\
+	\hline
+\end{tabular}
+}
+
+\subsection{Syntax}
+
+\begin{itemize}
+  \item \verb@[[!]Pn ->] Rd <- Rs ^ Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs XOR Imm@
+  \item \verb@[[!]Pn ->] Rd <- Rs ^ Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs XOR Rt@
+  \item \verb@[[!]Pn ->] Rd <- Rs ^ (Rt SHF Imm)@
+  \item \verb@[[!]Pn ->] Rd <- Rs XOR (Rt SHF Imm)@
+\end{itemize}
+
+\subsection{Type}
+XOR is an ALU operation. It may be placed in any slot of a packet. If the long immediate form is used it must not be located in the last slot in a packet, and no instruction may be specified in the following slot.
+
+\subsection{Behavior}
+Computes the bitwise logical XOR of the two operands, storing the result in the destination register. If two register operands are specified, the second may optionally be shifted by an immediate value before the computation is performed.
+
+
+\end{document}
