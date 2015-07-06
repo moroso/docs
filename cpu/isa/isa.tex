@@ -210,13 +210,14 @@ Error Code & Type\\
 \texttt{00000} & No Error\\
 \texttt{00001} & Page Fault on Instruction Fetch\\
 \texttt{00010} & Illegal Instruction\\
-\texttt{00011} & Duplicate Destination\\
-\texttt{00100} & Page Fault on Data Access\\
-\texttt{00101} & Invalid Physical Address\\
-\texttt{00110} & Divide by Zero (TODO are we doing other arithmetic exceptions??)\\
-\texttt{00111} & Interrupt\\
-\texttt{01000} & SYSCALL\\
-\texttt{01001} & BREAK
+\texttt{00011} & Insufficient Permissions\\
+\texttt{00100} & Duplicate Destination\\
+\texttt{00101} & Page Fault on Data Access\\
+\texttt{00110} & Invalid Physical Address\\
+\texttt{00111} & Divide by Zero (TODO are we doing other arithmetic exceptions??)\\
+\texttt{01000} & Interrupt\\
+\texttt{01001} & SYSCALL\\
+\texttt{01010} & BREAK
 \end{tabular}
 \caption{Exception Codes}
 \label{tab:exncodes}
