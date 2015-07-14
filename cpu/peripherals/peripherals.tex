@@ -1,0 +1,165 @@
+\documentclass[11pt,openany]{report}
+\usepackage[margin=1in]{geometry}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{enumerate}
+\usepackage{fancyhdr}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{multirow}
+\hypersetup{
+    colorlinks,
+    citecolor=black,
+    filecolor=black,
+    linkcolor=black,
+    urlcolor=black
+}
+\usepackage{tabularx}
+\setlength{\headheight}{15.2pt}
+\pagestyle{fancy}
+\title{OSOROM Peripheral Reference}
+\author{The Moroso Project}
+\setlength{\tabcolsep}{4pt}
+\setcounter{tocdepth}{1}
+
+\begin{document}
+\lhead{The Moroso Project}
+\chead{OSOROM Peripheral Reference}
+\rhead{v0.1}
+\maketitle
+\tableofcontents
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\chapter{Onboard Peripherals}
+
+\section{Introduction}
+The OSOROM will include several onboard peripherals:
+\begin{itemize}
+\item A programmable timer
+\item A serial port
+\item A video controller
+\item An SD card controller
+\item A USB controller?
+\end{itemize}
+
+Access to all peripherals is through memory mapped registers; each
+peripheral has its on page of physical address space for control
+registers.
+
+\section{Peripheral Reference}
+\subsection{Register Map}
+\centering
+\begin{tabular}{|l|l|l|}
+  \hline
+  \multirow{3}{*}{Timer} & \verb|TIMER_COUNT| & \texttt{0x80000000} \\
+  & \verb|TIMER_TOP| & \texttt{0x80000004} \\
+  & \verb|TIMER_CONTROL| & \texttt{0x80000008} \\
+  \hline
+  Serial Port & & \texttt{0x80001000} \\
+  \hline
+  Video Controller & & \texttt{0x80002000} \\
+  \hline
+  SD Controller & & \texttt{0x80003000} \\
+  \hline
+  USB Controller & & \texttt{0x80004000} \\
+  \hline
+\end{tabular}
+
+\section{Timer}
+Each clock tick, the \verb|TIMER_COUNT| register is incremented. If
+this value matches the value in the \verb|TIMER_TOP| register,
+\verb|TIMER_COUNT| is incremented and the \verb|TIMER_INT| bit in
+\verb|TIMER_CONTROL| is set.
+
+\subsection{Registers}
+\subsubsection{TIMER\_COUNT}
+
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+  \hline
+  31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 \\
+  \hline
+  \multicolumn{16}{|c|}{\texttt{TIMER\_COUNT}}\\
+  \hline
+  rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
+  \hline
+  \multicolumn{16}{c}{}\\
+  \hline
+  15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\
+  \hline
+  \multicolumn{16}{|c|}{\texttt{TIMER\_COUNT}}\\
+  \hline
+  rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
+  \hline
+\end{tabular}
+
+\begin{enumerate}
+\item[Bits 31:0] \verb|TIMER_COUNT|: The current count, incremented
+  each tick and reset to 0 when it matches the value in
+  \verb|TIMER_TOP|.
+\end{enumerate}
+
+\subsubsection{TIMER\_TOP}
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+  \hline
+  31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 \\
+  \hline
+  \multicolumn{16}{|c|}{\texttt{TIMER\_TOP}}\\
+  \hline
+  rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
+  \hline
+  \multicolumn{16}{c}{}\\
+  \hline
+  15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\
+  \hline
+  \multicolumn{16}{|c|}{\texttt{TIMER\_TOP}}\\
+  \hline
+  rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
+  \hline
+\end{tabular}
+
+\begin{enumerate}
+  \item[Bits 31:0] \verb|TIMER_TOP|: The top value for the timer. When \verb|TIMER_COUNT|
+              is equal to this value, \verb|TIMER_COUNT| will be reset to 0 and
+              the \verb|TIMER_INT| bit of \verb|TIMER_CONTROL| will be set.
+\end{enumerate}
+
+\subsubsection{TIMER\_CONTROL}
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+  \hline
+  31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 \\
+  \hline
+  \multicolumn{16}{|c|}{\multirow{2}{*}{(reserved)}}\\
+  \multicolumn{16}{|c|}{}\\
+  \hline
+  \multicolumn{16}{c}{}\\
+  \hline
+  15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\
+  \hline
+  \multicolumn{13}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{TIMER\_EN} & \texttt{TIMER\_INT\_EN} & \texttt{TIMER\_INT} \\
+  \cline{14-16}
+  \multicolumn{13}{|c|}{} & rw & rw & rw\\
+  \hline
+\end{tabular}
+
+\begin{enumerate}
+  \item[Bit 2] \verb|TIMER_EN|: Timer enable bit. The counter will be paused if
+    this bit is set to 0.
+  \item[Bit 1] \verb|TIMER_INT_EN|: Timer interrupt enable. If this bit and
+    \verb|TIMER_INT| are both set, a timer interrupt will be generated.
+  \item[Bit 0] \verb|TIMER_INT|: Timer interrupt flag. Set by hardware
+    when \verb|TIMER_COUNT| is equal to \verb|TIMER_TOP|.
+\end{enumerate}
+
+\section{Serial Port}
+
+\section{Video Controller}
+
+\section{SD Card Controller}
+
+\section{USB Controller}
+
+
+\end{document}
