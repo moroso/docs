@@ -43,7 +43,7 @@ The OSOROM will include several onboard peripherals:
 \end{itemize}
 
 Access to all peripherals is through memory mapped registers; each
-peripheral has its on page of physical address space for control
+peripheral has its own page of physical address space for control
 registers.
 
 \section{Peripheral Reference}
@@ -68,7 +68,7 @@ registers.
 \section{Timer}
 Each clock tick, the \verb|TIMER_COUNT| register is incremented. If
 this value matches the value in the \verb|TIMER_TOP| register,
-\verb|TIMER_COUNT| is incremented and the \verb|TIMER_INT| bit in
+\verb|TIMER_COUNT| is cleared and the \verb|TIMER_INT| bit in
 \verb|TIMER_CONTROL| is set.
 
 \subsection{Registers}

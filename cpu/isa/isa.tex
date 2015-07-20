@@ -92,10 +92,10 @@ Page table entries and page directory entries are each 32 bits and have the same
 \centering
 \texttt{%
 \begin{tabular}{cccccccccccccccccccccccccccccccc}
-	3 & & 2 & 2 & & & & & & & & & & & & & & & & 1 & 1 & & & & & & & & & & &\\
-	1 & & 9 & 8 & & & & & & & & & & & & & & & & 2 & 1 & & & & & & & 4 & 3 & 2 & 1 & 0\\
+	3 & & & & & & & & & & & & & & & & & & & 1 & 1 & & & & & & & & & & &\\
+	1 & & & & & & & & & & & & & & & & & & & 2 & 1 & & & & & & & 4 & 3 & 2 & 1 & 0\\
 	\hline
-	\multicolumn{3}{|c}{RSV} & \multicolumn{17}{|c|}{PHYSICAL PAGE BASE} & \multicolumn{8}{c|}{UNUSED} & G & \multicolumn{1}{|c|}{K} & W & \multicolumn{1}{|c|}{P}\\
+  \multicolumn{20}{|c|}{PHYSICAL PAGE BASE} & \multicolumn{8}{c|}{UNUSED} & G & \multicolumn{1}{|c|}{K} & W & \multicolumn{1}{|c|}{P}\\
 	\hline
 \end{tabular}
 }
@@ -110,7 +110,7 @@ The four flags in each entry have the following meanings:
   \item \texttt{P}: Present. Attempting to access a page without this bit set in both levels will result in a page fault.
 \end{itemize}
 
-Since our FPGA has 512MB of physical memory, physical page bases are 17 bits, and offsets are 12 bits. The top bits of an entry are not used but should remain 0 in case we go to 32-bit physical addresses in the future. Bits 11 through 4 are free for programmer use.
+Since our FPGA has 512MB of physical memory, 17 bits for base addresses 12 bits for offsets are sufficient to address any phyiscal memory. However, peripherals are mapped into the same physical address space (staring at \texttt{0x80000000}), so the entire 20 bits available for the base are needed.
 
 \section{Coprocessor Registers}
 \label{sec:cpregs}
