@@ -1,0 +1,25 @@
+This describes the format for traces dumped by the cpu_sim.
+
+For each packet:
+
+[4 bytes] pc
+[16 bytes] Actual packet contents
+[6 bytes] Register read bitfield (MSB first.)
+[6 bytes] Register write bitfield
+[1 byte] number of writes (redundant with the write bitfield, but makes it easier
+                           to parse.)
+[(0-4) * 4 bytes] Register write values. For each bit set in the register write
+                  bitfield, we'll have another entry here. Lower-indexed registers first.
+
+
+For memory writes (in a separate file):
+[4 bytes] pc (note: packets without writes are entirely excluded here.)
+[1 byte] first memory access type
+  bit 1-0: width
+  bit 2: 1 = write; 0 = read
+  bit 3: 1 = present; 0 = not present
+[1 byte] second memory access type
+[4 bytes, optional] virtual address 1
+[4 bytes, optional] value 1 (if write)
+[4 bytes, optional] virtual address 2
+[4 bytes, optional] value 2 (if write)
