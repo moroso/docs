@@ -4,7 +4,7 @@ For each packet:
 
 [4 bytes] pc
 [16 bytes] Actual packet contents
-[6 bytes] Register read bitfield (MSB first.)
+[6 bytes] Register read bitfield (LSB first.)
 [6 bytes] Register write bitfield
 [1 byte] number of writes (redundant with the write bitfield, but makes it easier
                            to parse.)
