@@ -1,0 +1,18 @@
+This file documents the format for Moroso debugging symbol files.
+
+Files start with a 4-byte magic marker "MROD", followed by sections
+identified by their own four-byte markers. All multi-byte integers
+are big endian.
+
+Currently, "LBEL" (label offsets) is the only section type; others will be
+added later.
+
+
+Label section (LBEL):
+4-byte magic "LBEL"
+4-byte count of the number of entries in the section
+The entries themselves, consisting of:
+  4-byte packet offset (in general, memory address / 0x10)
+  4-byte label name length, including trailing NUL
+  Label name, as a string, with a null terminator.
+
