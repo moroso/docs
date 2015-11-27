@@ -757,7 +757,7 @@ P3 is pinned to 1. Writes into P3 from compare instructions are ignored.
 	3 & 3 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 2 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & 1 & & & & & & & & & & \\
 	1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0\\
 	\hline
-	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 0 & 1 & \multicolumn{1}{|c}{X} & \multicolumn{5}{|c|}{RT} & X & X & X & X & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS} \\
+	\multicolumn{3}{|c|}{PRED} & 1 & 0 & 0 & 0 & 1 & 1 & 0 & 0 & 1 & \multicolumn{1}{|c}{S} & \multicolumn{5}{|c|}{RT} & \multicolumn{1}{c|}{W} & X & X & X & \multicolumn{5}{|c|}{RD} & \multicolumn{5}{c|}{RS} \\
 	\hline
 \end{tabular}
 }
@@ -776,7 +776,7 @@ DIV is a Control operation. It may only be placed as the first instruction in a 
 
 \subsection{Behavior}
 
-Performs the integer division \texttt{Rs / Rt}, writing the quotient into \texttt{Rd} and the remainder into the multiply/divide overflow register.
+Performs the integer division \texttt{Rs / Rt} or \texttt{\{OVF:Rs\} / Rt}, writing the quotient into \texttt{Rd} and the remainder into the multiply/divide overflow register. If the S bit is set, the operands are interpreted as two's complement signed integers; otherwise they are interpreted as unsigned. If the W bit is set, a ``wide'' division is done, where the 64-bit value \texttt{\{OVF:Rs\}} is divided by \texttt{Rt}; if it is unset, \texttt{Rs} is divided by \texttt{Rt}.
 
 
 \pagebreak
