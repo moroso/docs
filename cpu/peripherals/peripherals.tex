@@ -59,6 +59,7 @@ registers.
     \multirow{3}{*}{Serial Port} & \verb|SERIAL_BAUD| & \texttt{0x80001000} \\
                            & \verb|SERIAL_DATA| & \texttt{0x80001004} \\
                            & \verb|SERIAL_CONTROL| & \texttt{0x80001008} \\
+                           & \verb|SERIAL_STATUS| & \texttt{0x8000100c} \\
     \hline
     Video Controller & & \texttt{0x80002000} \\
     \hline
@@ -180,6 +181,10 @@ Reads from the \verb|DATA| register read the value in the receive buffer.
 When a byte is received, the value is stored in this buffer and the
 \verb|RX_COMPLETE| bit is set.
 
+Bits in the status register can be cleared by writing a $1$ to
+them. (Clears are done with $1$s rather than $0$s to avoid potential
+race conditions.)
+
 \subsubsection{SERIAL\_BAUD}
 
 \begin{center}
@@ -235,36 +240,59 @@ rate according to some formula we'll figure out later.
 
 \subsubsection{SERIAL\_CONTROL}
 \begin{center}
-  \begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+  \begin{tabular}{|c|c|c|c|c|c|}
     \hline
-    31 & $\cdots$ & 22 & 21 & 20 & 19 & 18 & 17 & 16 \\
+    31 & $\cdots$ & 19 & 18 & 17 & 16  \\
     \hline
-    \multicolumn{9}{|c|}{\multirow{2}{*}{(reserved)}}\\
-    \multicolumn{9}{|c|}{}\\
+    \multicolumn{6}{|c|}{\multirow{2}{*}{(reserved)}}\\
+    \multicolumn{6}{|c|}{}\\
     \hline
-    \multicolumn{9}{c}{}\\
+    \multicolumn{6}{c}{}\\
     \hline
-    15 & $\cdots$ & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\
+    15 & $\cdots$ & 3 & 2 & 1 & 0 \\
     \hline
-    \multicolumn{3}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{RXC\_INT\_EN} & \texttt{RX\_COMPLETE} & \texttt{TXE\_INT\_EN} & \texttt{TX\_EMPTY} & \texttt{TXC\_INT\_EN} & \texttt{TX\_COMPLETE} \\
-    \cline{4-9}
-    \multicolumn{3}{|c|}{} & rw & rw & rw & rw & rw & rw\\
+    \multicolumn{3}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{RX\_COMPLETE\_IE} & \texttt{TX\_EMPTY\_IE} & \texttt{TX\_COMPLETE\_IE} \\
+    \cline{4-6}
+    \multicolumn{3}{|c|}{} & rw & rw & rw\\
     \hline
   \end{tabular}
 \end{center}
 
 \begin{enumerate}
-\item[Bit 5] \verb|RXC_INT_EN|: Interrupt enable for \verb|RX_COMPLETE|.
-\item[Bit 4] \verb|RX_COMPLETE|: Set by hardware when a receive is
+\item[Bit 2] \verb|RXC_COMPLETE_IE|: Interrupt enable for \verb|RX_COMPLETE|.
+\item[Bit 1] \verb|TX_EMPTY_IE|: Interrupt enable for \verb|TX_EMPTY|.
+\item[Bit 0] \verb|TX_COMPLETE_IE|: Interrupt enable for \verb|TX_COMPLETE|.
+\end{enumerate}
+
+\subsubsection{SERIAL\_STATUS}
+\begin{center}
+  \begin{tabular}{|c|c|c|c|c|c|}
+    \hline
+    31 & $\cdots$ & 19 & 18 & 17 & 16  \\
+    \hline
+    \multicolumn{6}{|c|}{\multirow{2}{*}{(reserved)}}\\
+    \multicolumn{6}{|c|}{}\\
+    \hline
+    \multicolumn{6}{c}{}\\
+    \hline
+    15 & $\cdots$ & 3 & 2 & 1 & 0 \\
+    \hline
+    \multicolumn{3}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{RX\_COMPLETE} & \texttt{TX\_EMPTY} & \texttt{TX\_COMPLETE} \\
+    \cline{4-6}
+    \multicolumn{3}{|c|}{} & rw & r & rw\\
+    \hline
+  \end{tabular}
+\end{center}
+
+\begin{enumerate}
+\item[Bit 2] \verb|RX_COMPLETE|: Set by hardware when a receive is
   complete. Should be cleared by software when the value in
-  \verb|DATA| is read.
-\item[Bit 3] \verb|TXE_INT_EN|: Interrupt enable for \verb|TX_EMPTY|.
-\item[Bit 2] \verb|TX_EMPTY|: Cleared by hardware when a value is
+  \verb|DATA| is read by writing a $1$ to this bit.
+\item[Bit 1] \verb|TX_EMPTY|: Cleared by hardware when a value is
   written to \verb|DATA| and a transmission is in progress. Set by
   hardware when a transmission begins.
-\item[Bit 1] \verb|TXC_INT_EN|: Interrupt enable for \verb|TX_COMPLETE|.
 \item[Bit 0] \verb|TX_COMPLETE|: Set by hardware when a transmission
-  completes.
+  completes. Can be cleared by software by writing a $1$ to this bit.
 \end{enumerate}
 
 
