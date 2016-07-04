@@ -240,25 +240,26 @@ rate according to some formula we'll figure out later.
 
 \subsubsection{SERIAL\_CONTROL}
 \begin{center}
-  \begin{tabular}{|c|c|c|c|c|c|}
+  \begin{tabular}{|c|c|c|c|c|c|c|}
     \hline
-    31 & $\cdots$ & 19 & 18 & 17 & 16  \\
+    31 & $\cdots$ & 20 & 19 & 18 & 17 & 16  \\
     \hline
-    \multicolumn{6}{|c|}{\multirow{2}{*}{(reserved)}}\\
-    \multicolumn{6}{|c|}{}\\
+    \multicolumn{7}{|c|}{\multirow{2}{*}{(reserved)}}\\
+    \multicolumn{7}{|c|}{}\\
     \hline
-    \multicolumn{6}{c}{}\\
+    \multicolumn{7}{c}{}\\
     \hline
-    15 & $\cdots$ & 3 & 2 & 1 & 0 \\
+    15 & $\cdots$ & 4 & 3 & 2 & 1 & 0 \\
     \hline
-    \multicolumn{3}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{RX\_COMPLETE\_IE} & \texttt{TX\_EMPTY\_IE} & \texttt{TX\_COMPLETE\_IE} \\
-    \cline{4-6}
-    \multicolumn{3}{|c|}{} & rw & rw & rw\\
+    \multicolumn{3}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{RX\_ENABLE} & \texttt{RX\_COMPLETE\_IE} & \texttt{TX\_EMPTY\_IE} & \texttt{TX\_COMPLETE\_IE} \\
+    \cline{4-7}
+    \multicolumn{3}{|c|}{} & rw & rw & rw & rw\\
     \hline
   \end{tabular}
 \end{center}
 
 \begin{enumerate}
+\item[Bit 3] \verb|RX_ENABLE|: Enable UART receiver.
 \item[Bit 2] \verb|RXC_COMPLETE_IE|: Interrupt enable for \verb|RX_COMPLETE|.
 \item[Bit 1] \verb|TX_EMPTY_IE|: Interrupt enable for \verb|TX_EMPTY|.
 \item[Bit 0] \verb|TX_COMPLETE_IE|: Interrupt enable for \verb|TX_COMPLETE|.
@@ -266,25 +267,27 @@ rate according to some formula we'll figure out later.
 
 \subsubsection{SERIAL\_STATUS}
 \begin{center}
-  \begin{tabular}{|c|c|c|c|c|c|}
+  \begin{tabular}{|c|c|c|c|c|c|c|}
     \hline
-    31 & $\cdots$ & 19 & 18 & 17 & 16  \\
+    31 & $\cdots$ & 20 & 19 & 18 & 17 & 16  \\
     \hline
-    \multicolumn{6}{|c|}{\multirow{2}{*}{(reserved)}}\\
-    \multicolumn{6}{|c|}{}\\
+    \multicolumn{7}{|c|}{\multirow{2}{*}{(reserved)}}\\
+    \multicolumn{7}{|c|}{}\\
     \hline
-    \multicolumn{6}{c}{}\\
+    \multicolumn{7}{c}{}\\
     \hline
-    15 & $\cdots$ & 3 & 2 & 1 & 0 \\
+    15 & $\cdots$ & 4 & 3 & 2 & 1 & 0 \\
     \hline
-    \multicolumn{3}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{RX\_COMPLETE} & \texttt{TX\_EMPTY} & \texttt{TX\_COMPLETE} \\
-    \cline{4-6}
-    \multicolumn{3}{|c|}{} & rw & r & rw\\
+    \multicolumn{3}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{RX\_ERROR} & \texttt{RX\_COMPLETE} & \texttt{TX\_EMPTY} & \texttt{TX\_COMPLETE} \\
+    \cline{4-7}
+    \multicolumn{3}{|c|}{} & rw & rw & r & rw\\
     \hline
   \end{tabular}
 \end{center}
 
 \begin{enumerate}
+\item[Bit 3] \verb|RX_ERROR|: Set by hardware when an error occurs
+  when receiving a byte (e.g.\ missing stop bit). Cleared by writing a $1$.
 \item[Bit 2] \verb|RX_COMPLETE|: Set by hardware when a receive is
   complete. Should be cleared by software when the value in
   \verb|DATA| is read by writing a $1$ to this bit.
