@@ -22,6 +22,8 @@
 \setlength{\tabcolsep}{4pt}
 \setcounter{tocdepth}{1}
 
+\newcommand\iic{I$^2$C}
+
 \begin{document}
 \lhead{The Moroso Project}
 \chead{OSOROM Peripheral Reference}
@@ -33,12 +35,19 @@
 \chapter{Onboard Peripherals}
 
 \section{Introduction}
-The OSOROM will include several onboard peripherals:
+The OSOROM includes several onboard peripherals:
+\begin{itemize}
+\item LED/button/switch IO
+\item A serial port
+\item An \iic\ controller
+\item An SD card controller
+\item An audio controller
+\item A video controller
+\item An interrupt controller
+\end{itemize}
+and will likely eventually have:
 \begin{itemize}
 \item A programmable timer
-\item A serial port
-\item A video controller
-\item An SD card controller
 \item A USB controller?
 \end{itemize}
 
@@ -47,36 +56,247 @@ peripheral has its own page of physical address space for control
 registers.
 
 \section{Peripheral Reference}
-\subsection{Register Map}
+\subsection{Peripheral Map}
+Each peripheral instance has an index; that index is used to determine
+the offset of its page of memory mapped registers, and is also used
+in the interrupt controller to enable or disable interrupts from that
+peripheral instance. The peripheral instances and their indices are:
 
 \begin{center}
   \begin{tabular}{|l|l|l|}
     \hline
-    \multirow{3}{*}{Timer} & \verb|TIMER_COUNT| & \texttt{0x80000000} \\
-                           & \verb|TIMER_TOP| & \texttt{0x80000004} \\
-                           & \verb|TIMER_CONTROL| & \texttt{0x80000008} \\
+    Index & Name & Description \\
     \hline
-    \multirow{3}{*}{Serial Port} & \verb|SERIAL_BAUD| & \texttt{0x80001000} \\
-                           & \verb|SERIAL_DATA| & \texttt{0x80001004} \\
-                           & \verb|SERIAL_CONTROL| & \texttt{0x80001008} \\
-                           & \verb|SERIAL_STATUS| & \texttt{0x8000100c} \\
+    0 & \verb|LEDSW| & LEDs and switches \\
     \hline
-    Video Controller & & \texttt{0x80002000} \\
+    1 & \verb|UART| & Serial UART \\
     \hline
-    SD Controller & & \texttt{0x80003000} \\
+    2 & \verb|I2C| & \iic\ controller \\
     \hline
-    USB Controller & & \texttt{0x80004000} \\
+    3 & \verb|SD| & SD card controller \\
+    \hline
+    4 & \verb|AUDIO| & Audio controller \\
+    \hline
+    5 & \verb|VIDEO| & Video controller \\
+    \hline
+    6 & \verb|INT| & Interrupt controller \\
+    \hline
+    7 & \verb|USB| & USB controller (reserved) \\
+    \hline
+    8-15 & \verb|TIM0|-\verb|TIM7| & Timers (reserved) \\
     \hline
   \end{tabular}
 \end{center}
-\section{Timer}
-Each clock tick, the \verb|TIMER_COUNT| register is incremented. If
-this value matches the value in the \verb|TIMER_TOP| register,
-\verb|TIMER_COUNT| is cleared and the \verb|TIMER_INT| bit in
-\verb|TIMER_CONTROL| is set.
+
+The base address for the memory mapped registers of a peripheral
+is the peripheral's index, in pages, from the start of the peripheral
+region (\texttt{0x80000000}). So, for example, interrupt registers
+(peripheral index 6) begin at \texttt{0x80006000}.
+
+\chapter{Peripherals}
+
+\section{LED/switch/button interface}
+The Moroso board has sixteen LEDs (eight green and eight red), as well as four buttons
+and ten switches; all are accessed through the \verb|LEDSW| peripheral. Interrupts
+can be configured on state changes of any button or switch. In the future, more
+control over interrupts (such as the ability to trigger on a rising/falling edge)
+may be added.
 
 \subsection{Registers}
-\subsubsection{TIMER\_COUNT}
+\subsubsection{\texttt{0x0}: LEDS}
+\begin{center}
+  \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+    \hline
+    31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 \\
+    \hline
+    \multicolumn{16}{|c|}{\multirow{2}{*}{(reserved)}}\\
+    \multicolumn{16}{|c|}{}
+    \\
+    \hline
+    \multicolumn{16}{c}{}\\
+    \hline
+    15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\
+    \hline
+    \multicolumn{8}{|c|}{\texttt{LEDS\_R}} & \multicolumn{8}{c|}{\texttt{LEDS\_G}} \\
+    \hline
+    rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
+    \hline
+  \end{tabular}
+\end{center}
+
+\begin{enumerate}
+\item[Bits 15:8] \verb|LEDS_R|: The value of the red LEDs (MSB corresponding to the leftmost red LED).
+\item[Bits 7:0] \verb|LEDS_G|: The value of the green LEDs (MSB corresponding to the leftmost green LED).
+\end{enumerate}
+
+\subsubsection{\texttt{0x4}: SW\_BUTTONS}
+\begin{center}
+  \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+    \hline
+    31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 \\
+    \hline
+    \multicolumn{6}{|c|}{\multirow{2}{*}{(reserved)}} & \multicolumn{10}{c|}{\texttt{SWITCHES}}\\
+    \cline{7-16}
+    \multicolumn{6}{|c|}{} & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
+    \hline
+    \multicolumn{16}{c}{}\\
+    \hline
+    15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\
+    \hline
+    \multicolumn{12}{|c|}{\multirow{2}{*}{(reserved)}} & \multicolumn{4}{c|}{\texttt{BUTTONS}} \\
+    \cline{13-16}
+    \multicolumn{12}{|c|}{} & rw & rw & rw & rw\\
+    \hline
+  \end{tabular}
+\end{center}
+
+\begin{enumerate}
+\item[Bits 25:16] \verb|SWITCHES|: The value of each switch (MSB corresponding to leftmost switch).
+\item[Bits 3:0] \verb|BUTTONS|: The value of each button (MSB corresponding to the leftmost button).
+\end{enumerate}
+
+\subsection{Register map}
+\begin{center}
+  \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Offset} & \textbf{Register name} \\
+    \hline
+    \texttt{0x0} & \texttt{LEDS} \\
+    \hline
+    \texttt{0x4} & \texttt{SW\_BUTTONS} \\
+    \hline
+  \end{tabular}
+\end{center}
+
+\section{Serial Port}
+
+The serial port contains two internal 8-bit registers, the receive and
+transmit buffer registers. These cannot be accessed directly, but instead
+are accessed through the \verb|DATA| register.
+
+When a value is written to the \verb|DATA| register, it is written
+through to the transmit buffer. If a transmission is not in progress,
+a transmission will begin with the written value, and the \verb|TX_EMPTY|
+bit will be set to indicate that the transmit buffer is ready for
+another write. If a value is written to \verb|DATA| and a transmission
+is in progress, the value will be written to the transmit buffer and
+the \verb|TX_EMPTY| bit will be cleared. When the transmission
+ends, if \verb|TX_EMPTY| is clear, a new transmission will begin
+with the value in the transmit buffer, and the \verb|TX_EMPTY|
+and \verb|TX_COMPLETE| bits will be set.
+
+Reads from the \verb|DATA| register read the value in the receive buffer.
+When a byte is received, the value is stored in this buffer and the
+\verb|RX_COMPLETE| bit is set.
+
+Bits in the status register can be cleared by writing a $1$ to
+them.
+
+\subsubsection{\texttt{0x0}: DATA}
+
+\begin{center}
+  \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+    \hline
+    31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 \\
+    \hline
+    \multicolumn{16}{|c|}{\multirow{2}{*}{(reserved)}}\\
+    \multicolumn{16}{|c|}{}\\
+    \hline
+    \multicolumn{16}{c}{}\\
+    \hline
+    15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\
+    \hline
+    \multicolumn{7}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{P} & \multicolumn{8}{c|}{\texttt{DATA}}\\
+    \cline{8-16}
+    \multicolumn{7}{|c|}{} & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
+    \hline
+  \end{tabular}
+\end{center}
+
+\begin{enumerate}
+\item[Bit 8] \verb|P|: Reserved for use as a parity bit. Reads as 0.
+\item[Bits 7:0] \verb|DATA|: Data register. See description above.
+\end{enumerate}
+
+\subsubsection{\texttt{0x4}: CSR}
+\begin{center}
+  \begin{tabular}{|c|c|c|c|c|c|c|c|}
+    \hline
+    31 & $\cdots$ & 21 & 20 & 19 & 18 & 17 & 16  \\
+    \hline
+    \multicolumn{8}{|c|}{\multirow{2}{*}{(reserved)}}\\
+    \multicolumn{8}{|c|}{}\\
+    \hline
+    \multicolumn{7}{c}{}\\
+    \hline
+    15 & $\cdots$ & 5 & 4 & 3 & 2 & 1 & 0 \\
+    \hline
+    \multicolumn{3}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{RX\_ERROR} & \texttt{RX\_COMPLETE} & \texttt{RX\_ENABLE} & \texttt{TX\_EMPTY} & \texttt{TX\_COMPLETE} \\
+    \cline{4-8}
+    \multicolumn{3}{|c|}{} & rw & rw & rw & r & rw\\
+    \hline
+  \end{tabular}
+\end{center}
+
+\begin{enumerate}
+\item[Bit 4] \verb|RX_ERROR|: Set by hardware on receive error.
+\item[Bit 3] \verb|RX_COMPLETE|: Set by hardware when a byte is received.
+\item[Bit 2] \verb|RX_ENABLE|: Enable UART receiver.
+\item[Bit 1] \verb|TX_EMPTY|: Indicates whether the TX buffer is empty. Set and cleared by hardware.
+\item[Bit 0] \verb|TX_COMPLETE|: Set by hardware when a byte transmission finishes.
+\end{enumerate}
+
+
+\subsubsection{\texttt{0x8}: BAUD (not yet implemented)}
+
+\begin{center}
+  \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+    \hline
+    31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 \\
+    \hline
+    \multicolumn{16}{|c|}{\texttt{SERIAL\_BAUD}}\\
+    \hline
+    rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
+    \hline
+    \multicolumn{16}{c}{}\\
+    \hline
+    15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\
+    \hline
+    \multicolumn{16}{|c|}{\texttt{SERIAL\_BAUD}}\\
+    \hline
+    rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
+    \hline
+  \end{tabular}
+\end{center}
+
+\begin{enumerate}
+\item[Bits 31:0] \verb|SERIAL_BAUD|: Determines the baud rate as a function
+  of the CPU clock:
+  \[
+  \textrm{Baud rate} = \frac{f_{\texttt{CPU}}}{\texttt{SERIAL\_BAUD} + 1}
+  \]
+\end{enumerate}
+
+\subsection{Register map}
+\begin{center}
+  \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Offset} & \textbf{Register name} \\
+    \hline
+    \texttt{0x0} & \texttt{DATA} \\
+    \hline
+    \texttt{0x4} & \texttt{CSR} \\
+    \hline
+  \end{tabular}
+\end{center}
+
+\section{Timer}
+Each clock tick, the \verb|COUNT| register is incremented. If
+this value matches the value in the \verb|TOP| register,
+\verb|COUNT| is cleared and an interrupt is signaled.
+
+\subsection{Registers}
+\subsubsection{\texttt{0x0}: COUNT}
 
 \begin{center}
   \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
@@ -104,7 +324,7 @@ this value matches the value in the \verb|TIMER_TOP| register,
   \verb|TIMER_TOP|.
 \end{enumerate}
 
-\subsubsection{TIMER\_TOP}
+\subsubsection{\texttt{0x4}: TOP}
 \begin{center}
   \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
     \hline
@@ -128,10 +348,10 @@ this value matches the value in the \verb|TIMER_TOP| register,
 \begin{enumerate}
   \item[Bits 31:0] \verb|TIMER_TOP|: The top value for the timer. When \verb|TIMER_COUNT|
               is equal to this value, \verb|TIMER_COUNT| will be reset to 0 and
-              the \verb|TIMER_INT| bit of \verb|TIMER_CONTROL| will be set.
+              an interrupt will be signaled.
 \end{enumerate}
 
-\subsubsection{TIMER\_CONTROL}
+\subsubsection{\texttt{0x8}: CONTROL}
 \begin{center}
   \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
     \hline
@@ -144,160 +364,32 @@ this value matches the value in the \verb|TIMER_TOP| register,
     \hline
     15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\
     \hline
-    \multicolumn{13}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{TIMER\_EN} & \texttt{TIMER\_INT\_EN} & \texttt{TIMER\_INT} \\
-    \cline{14-16}
-    \multicolumn{13}{|c|}{} & rw & rw & rw\\
+    \multicolumn{15}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{TIMER\_EN} \\
+    \cline{16-16}
+    \multicolumn{15}{|c|}{} & rw \\
     \hline
   \end{tabular}
 \end{center}
 
 \begin{enumerate}
-  \item[Bit 2] \verb|TIMER_EN|: Timer enable bit. The counter will be paused if
+  \item[Bit 0] \verb|TIMER_EN|: Timer enable bit. The counter will be paused if
     this bit is set to 0.
-  \item[Bit 1] \verb|TIMER_INT_EN|: Timer interrupt enable. If this bit and
-    \verb|TIMER_INT| are both set, a timer interrupt will be generated.
-  \item[Bit 0] \verb|TIMER_INT|: Timer interrupt flag. Set by hardware
-    when \verb|TIMER_COUNT| is equal to \verb|TIMER_TOP|.
 \end{enumerate}
 
-\section{Serial Port}
-
-The serial port contains two internal 8-bit registers, the receive and
-transmit buffer registers. These cannot be accessed directly, but instead
-are accessed through the \verb|DATA| register.
-
-When a value is written to the \verb|DATA| register, it is written
-through to the transmit buffer. If a transmission is not in progress,
-a transmission will begin with the written value, and the \verb|TX_EMPTY|
-bit will be set to indicate that the transmit buffer is ready for
-another write. If a value is written to \verb|DATA| and a transmission
-is in progress, the value will be written to the transmit buffer and
-the \verb|TX_EMPTY| bit will be cleared. When the transmission
-ends, if \verb|TX_EMPTY| is clear, a new transmission will begin
-with the value in the transmit buffer, and the \verb|TX_EMPTY|
-and \verb|TX_COMPLETE| bits will be set.
-
-Reads from the \verb|DATA| register read the value in the receive buffer.
-When a byte is received, the value is stored in this buffer and the
-\verb|RX_COMPLETE| bit is set.
-
-Bits in the status register can be cleared by writing a $1$ to
-them. (Clears are done with $1$s rather than $0$s to avoid potential
-race conditions.)
-
-\subsubsection{SERIAL\_BAUD}
-
+\subsection{Register map}
 \begin{center}
-  \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
+  \begin{tabular}{|l|l|}
     \hline
-    31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 \\
+    \textbf{Offset} & \textbf{Register name} \\
     \hline
-    \multicolumn{16}{|c|}{\texttt{SERIAL\_BAUD}}\\
+    \texttt{0x0} & \texttt{COUNT} \\
     \hline
-    rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
+    \texttt{0x4} & \texttt{TOP} \\
     \hline
-    \multicolumn{16}{c}{}\\
-    \hline
-    15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\
-    \hline
-    \multicolumn{16}{|c|}{\texttt{SERIAL\_BAUD}}\\
-    \hline
-    rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
+    \texttt{0x8} & \texttt{CONTROL} \\
     \hline
   \end{tabular}
 \end{center}
-
-\begin{enumerate}
-\item[Bits 31:0] \verb|SERIAL_BAUD|: A value that will determine the baud
-rate according to some formula we'll figure out later.
-\end{enumerate}
-
-\subsubsection{SERIAL\_DATA}
-
-\begin{center}
-  \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|c|}
-    \hline
-    31 & 30 & 29 & 28 & 27 & 26 & 25 & 24 & 23 & 22 & 21 & 20 & 19 & 18 & 17 & 16 \\
-    \hline
-    \multicolumn{16}{|c|}{\multirow{2}{*}{(reserved)}}\\
-    \multicolumn{16}{|c|}{}\\
-    \hline
-    \multicolumn{16}{c}{}\\
-    \hline
-    15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\
-    \hline
-    \multicolumn{7}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{P} & \multicolumn{8}{c|}{\texttt{DATA}}\\
-    \cline{8-16}
-    \multicolumn{7}{|c|}{} & rw & rw & rw & rw & rw & rw & rw & rw & rw\\
-    \hline
-  \end{tabular}
-\end{center}
-
-\begin{enumerate}
-\item[Bit 8] \verb|P|: Reserved for use as a parity bit. Reads as 0.
-\item[Bits 7:0] \verb|DATA|: Data register. See description above.
-\end{enumerate}
-
-\subsubsection{SERIAL\_CONTROL}
-\begin{center}
-  \begin{tabular}{|c|c|c|c|c|c|c|}
-    \hline
-    31 & $\cdots$ & 20 & 19 & 18 & 17 & 16  \\
-    \hline
-    \multicolumn{7}{|c|}{\multirow{2}{*}{(reserved)}}\\
-    \multicolumn{7}{|c|}{}\\
-    \hline
-    \multicolumn{7}{c}{}\\
-    \hline
-    15 & $\cdots$ & 4 & 3 & 2 & 1 & 0 \\
-    \hline
-    \multicolumn{3}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{RX\_ENABLE} & \texttt{RX\_COMPLETE\_IE} & \texttt{TX\_EMPTY\_IE} & \texttt{TX\_COMPLETE\_IE} \\
-    \cline{4-7}
-    \multicolumn{3}{|c|}{} & rw & rw & rw & rw\\
-    \hline
-  \end{tabular}
-\end{center}
-
-\begin{enumerate}
-\item[Bit 3] \verb|RX_ENABLE|: Enable UART receiver.
-\item[Bit 2] \verb|RXC_COMPLETE_IE|: Interrupt enable for \verb|RX_COMPLETE|.
-\item[Bit 1] \verb|TX_EMPTY_IE|: Interrupt enable for \verb|TX_EMPTY|.
-\item[Bit 0] \verb|TX_COMPLETE_IE|: Interrupt enable for \verb|TX_COMPLETE|.
-\end{enumerate}
-
-\subsubsection{SERIAL\_STATUS}
-\begin{center}
-  \begin{tabular}{|c|c|c|c|c|c|c|}
-    \hline
-    31 & $\cdots$ & 20 & 19 & 18 & 17 & 16  \\
-    \hline
-    \multicolumn{7}{|c|}{\multirow{2}{*}{(reserved)}}\\
-    \multicolumn{7}{|c|}{}\\
-    \hline
-    \multicolumn{7}{c}{}\\
-    \hline
-    15 & $\cdots$ & 4 & 3 & 2 & 1 & 0 \\
-    \hline
-    \multicolumn{3}{|c|}{\multirow{2}{*}{(reserved)}} & \texttt{RX\_ERROR} & \texttt{RX\_COMPLETE} & \texttt{TX\_EMPTY} & \texttt{TX\_COMPLETE} \\
-    \cline{4-7}
-    \multicolumn{3}{|c|}{} & rw & rw & r & rw\\
-    \hline
-  \end{tabular}
-\end{center}
-
-\begin{enumerate}
-\item[Bit 3] \verb|RX_ERROR|: Set by hardware when an error occurs
-  when receiving a byte (e.g.\ missing stop bit). Cleared by writing a $1$.
-\item[Bit 2] \verb|RX_COMPLETE|: Set by hardware when a receive is
-  complete. Should be cleared by software when the value in
-  \verb|DATA| is read by writing a $1$ to this bit.
-\item[Bit 1] \verb|TX_EMPTY|: Cleared by hardware when a value is
-  written to \verb|DATA| and a transmission is in progress. Set by
-  hardware when a transmission begins.
-\item[Bit 0] \verb|TX_COMPLETE|: Set by hardware when a transmission
-  completes. Can be cleared by software by writing a $1$ to this bit.
-\end{enumerate}
-
 
 \section{Video Controller}
 

@@ -181,7 +181,7 @@ defined not to affect system state other than through reads and writes.
 \label{sec:exns}
 
 Exceptions and interrupts cause the processor to enter kernel mode and transfer control to the virtual address specified in the EHA register. 
-If an interrupt occurs, the code corresponding to that interrupt will be written into the EC0 register. If one or more instructions in a packet cause exceptions, a code corresponding to the exception type will be written into the EC register corresponding to that instruction's location in the packet. If an instruction on lane 0 or 1 attempts to access an invalid memory address, the address will be written into the EA register for that lane. In all cases, the virtual address of the program counter where the exception occurred is written into the EPC register. For exceptions, this is the address of the instruction packet that caused the exception. For interrupts, this is the address of the first instruction packet not executed due to the interrupt. In all cases, interrupts are disabled. This is necessary in order to ensure the kernel can save the coprocessor registers before they are overwritten by another interrupt.
+If an interrupt occurs, the ``Interrupt'' error code will be written into the EC0 register, and information about the interrupt can be read from the interrupt controller peripheral. If one or more instructions in a packet cause exceptions, a code corresponding to the exception type will be written into the EC register corresponding to that instruction's location in the packet. If an instruction on lane 0 or 1 attempts to access an invalid memory address, the address will be written into the EA register for that lane. In all cases, the virtual address of the program counter where the exception occurred is written into the EPC register. For exceptions, this is the address of the instruction packet that caused the exception. For interrupts, this is the address of the first instruction packet not executed due to the interrupt. In all cases, interrupts are disabled. This is necessary in order to ensure the kernel can save the coprocessor registers before they are overwritten by another interrupt.
 
 \subsection{Error Code Format}
 
@@ -190,9 +190,9 @@ If an interrupt occurs, the code corresponding to that interrupt will be written
 \texttt{%
 \begin{tabular}{cccccccccccccccccccccccccccccccc}
 	3 & & & & & & & & & & & & & & & & & & & & & & & & & & & & & & &\\
-	1 & & & & & & & & & & & & & & & & & & & & & & & & 7 & 6 & 5 & 4 & & & & 0\\
+	1 & & & & & & & & & & & & & & & & & & & & & & & & & & 5 & 4 & & & & 0\\
 	\hline
-	\multicolumn{25}{|c|}{RESERVED} & \multicolumn{2}{c}{INT} & \multicolumn{5}{|c|}{EXNTYPE} \\
+	\multicolumn{27}{|c|}{RESERVED} & \multicolumn{5}{|c|}{EXNTYPE} \\
 	\hline
 \end{tabular}
 }
@@ -200,7 +200,6 @@ If an interrupt occurs, the code corresponding to that interrupt will be written
 
 \begin{itemize}
   \item \texttt{EXNTYPE} corresponds to a value in Table~\ref{tab:exncodes} and indicates the type of exception that occurred.
-  \item If \texttt{EXNTYPE} indicates that an interrupt occurred, \texttt{INT} will correspond to a value in Table~\ref{tab:intcodes} and signify the type of interrupt.
 \end{itemize}
 
 \begin{table}[!h]
@@ -222,20 +221,6 @@ Error Code & Type\\
 \caption{Exception Codes}
 \label{tab:exncodes}
 \end{table}
-
-\begin{table}[!h]
-\begin{tabular}{l|l}
-Interrupt Code & Type\\
-\hline
-\texttt{00} & Timer\\
-\texttt{01} & USB\\
-\texttt{10} & Framebuffer\\
-\texttt{11} & SD Card
-\end{tabular}
-\caption{Interrupt Codes}
-\label{tab:intcodes}
-\end{table}
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
