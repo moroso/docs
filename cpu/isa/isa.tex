@@ -105,7 +105,7 @@ The four flags in each entry have the following meanings:
 
 \begin{itemize}
   \item \texttt{G}: Global page. Mappings with this bit set in either level will not be flushed from the TLB when the page table base register is modified.
-  \item \texttt{K}: Kernel-only page. Mappings with this bit set in either level may only be read or written to while the processor is in kernel mode. Attempting to access such mappings from user mode will generate a page fault exception.
+  \item \texttt{U}: Usermode-accessible page. Mappings with this bit unset in either level may only be read or written to while the processor is in kernel mode. Attempting to access such mappings from user mode will generate a page fault exception.
   \item \texttt{W}: Writeable page. Attempting to write to a page without this bit set in both levels will result in a page fault.
   \item \texttt{P}: Present. Attempting to access a page without this bit set in both levels will result in a page fault.
 \end{itemize}
